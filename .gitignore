@@ -6,3 +6,4 @@ devel/
 *.so
 *.dll
 *.exe
+*.map
