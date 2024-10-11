@@ -1,8 +1,0 @@
-prefix=/home/yzh/导航框架/uneven_planner/install
-
-Name: mpc_controller
-Description: Description of mpc_controller
-Version: 0.0.1
-Cflags: -I${prefix}/include
-Libs: -L${prefix}/lib 
-Requires: roscpp std_msgs message_runtime

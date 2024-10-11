@@ -1,8 +1,0 @@
-prefix=/home/yzh/导航框架/uneven_planner/install
-
-Name: carsim
-Description: Description of carsim
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 
