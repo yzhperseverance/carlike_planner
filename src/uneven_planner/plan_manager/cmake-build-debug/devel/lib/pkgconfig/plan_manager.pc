@@ -1,0 +1,8 @@
+prefix=/home/yzh/导航框架/uneven_planner/src/uneven_planner/plan_manager/cmake-build-debug/devel
+
+Name: plan_manager
+Description: Description of plan_manager
+Version: 0.0.1
+Cflags: -I/home/yzh/导航框架/uneven_planner/src/uneven_planner/plan_manager/include
+Libs: -L${prefix}/lib -lplan_manager
+Requires: roscpp std_msgs uneven_map visualization_msgs front_end back_end mpc_controller

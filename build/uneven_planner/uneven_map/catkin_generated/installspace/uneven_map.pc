@@ -1,0 +1,8 @@
+prefix=/home/yzh/导航框架/uneven_planner/install
+
+Name: uneven_map
+Description: Description of uneven_map
+Version: 0.0.1
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib -luneven_map
+Requires: roscpp std_msgs nav_msgs sensor_msgs visualization_msgs
