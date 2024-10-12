@@ -6,10 +6,10 @@
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Path.h>
 
-#include "uneven_map/uneven_map.h"
-#include "front_end/kino_astar.h"
-#include "utils/se2traj.hpp"
-#include "utils/lbfgs.hpp"
+#include "../../../../uneven_map/include/uneven_map/uneven_map.h"
+#include "../../../../front_end/include/front_end/kino_astar.h"
+#include "../../utils/se2traj.hpp"
+#include "../../utils/lbfgs.hpp"
 
 namespace uneven_planner
 {

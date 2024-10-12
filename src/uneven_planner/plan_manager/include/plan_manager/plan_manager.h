@@ -11,7 +11,7 @@
 
 #include "uneven_map/uneven_map.h"
 #include "front_end/kino_astar.h"
-#include "back_end/alm_traj_opt.h"
+#include "back_end/minco_traj_opt/alm_traj_opt.h"
 #include "mpc_controller/SE2Traj.h"
 
 namespace uneven_planner

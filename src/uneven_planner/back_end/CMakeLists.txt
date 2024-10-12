@@ -30,8 +30,10 @@ include_directories(
     ${Eigen3_INCLUDE_DIRS} 
 )
 
-add_library(back_end 
-    src/alm_traj_opt.cpp
+add_library(back_end
+        src/minco_traj_opt/alm_traj_opt.cpp
+        src/minco_traj_opt/alm_traj_opt_flow.cpp
+        src/suscriber/odom_subscriber.cpp
 )
 
 target_link_libraries(back_end

@@ -1,4 +1,4 @@
-#include "back_end/alm_traj_opt.h"
+#include "back_end/minco_traj_opt/alm_traj_opt.h"
 
 namespace uneven_planner
 {
