@@ -33,7 +33,7 @@ include_directories(
 add_library(back_end
         src/minco_traj_opt/alm_traj_opt.cpp
         src/minco_traj_opt/alm_traj_opt_flow.cpp
-        src/suscriber/odom_subscriber.cpp
+        src/suscriber/path_subscriber.cpp
 )
 
 target_link_libraries(back_end

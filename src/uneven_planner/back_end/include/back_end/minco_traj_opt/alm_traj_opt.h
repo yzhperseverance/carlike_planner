@@ -7,7 +7,6 @@
 #include <nav_msgs/Path.h>
 
 #include "../../../../uneven_map/include/uneven_map/uneven_map.h"
-#include "../../../../front_end/include/front_end/kino_astar.h"
 #include "../../utils/se2traj.hpp"
 #include "../../utils/lbfgs.hpp"
 
@@ -21,7 +20,7 @@ namespace uneven_planner
     class ALMTrajOpt
     {
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-        
+
         public:
             // params
 
@@ -55,7 +54,6 @@ namespace uneven_planner
             /// debug and test
             bool in_test;
             bool in_debug;
-            bool in_opt = false;
 
             // data
             int             piece_xy;
@@ -74,21 +72,14 @@ namespace uneven_planner
             Eigen::MatrixXd init_yaw;
             Eigen::MatrixXd end_yaw;
             MINCO_SE2       minco_se2;
-            KinoAstar::Ptr  front_end;
             UnevenMap::Ptr  uneven_map;
 
             // ros
-            ros::Publisher se2_pub;
-            ros::Publisher se3_pub;
             ros::Publisher debug_pub;
-            ros::Subscriber odom_sub;
-            ros::Subscriber wps_sub;
-            Eigen::Vector3d odom_pos;
 
         public:
             void init(ros::NodeHandle& nh);
-            void rcvOdomCallBack(const nav_msgs::OdometryConstPtr& msg);
-            void rcvWpsCallBack(const geometry_msgs::PoseStamped msg);
+            ALMTrajOpt();
             int optimizeSE2Traj(const Eigen::MatrixXd &initStateXY, \
                                 const Eigen::MatrixXd &endStateXY , \
                                 const Eigen::MatrixXd &innerPtsXY , \
@@ -96,14 +87,14 @@ namespace uneven_planner
                                 const Eigen::VectorXd &endYaw     , \
                                 const Eigen::VectorXd &innerPtsYaw, \
                                 const double & totalTime            );
+
+        private:
             void initScaling(Eigen::VectorXd x0);
             void calConstrainCostGrad(double& cost, Eigen::MatrixXd& gdCxy, Eigen::VectorXd &gdTxy, \
                                       Eigen::MatrixXd& gdCyaw, Eigen::VectorXd &gdTyaw);
             void pubDebugTraj(const SE2Trajectory& traj);
-            void visSE2Traj(const SE2Trajectory& traj);
-            void visSE3Traj(const SE2Trajectory& traj);
 
-            inline void setFrontend(const KinoAstar::Ptr& front_end);
+
             inline void setEnvironment(const UnevenMap::Ptr& env);
             inline void updateDualVars();
             inline bool judgeConvergence();
@@ -119,10 +110,6 @@ namespace uneven_planner
             inline void calTfromTau(const double& tau, Eigen::VectorXd& T);
     };
 
-    inline void ALMTrajOpt::setFrontend(const KinoAstar::Ptr& front_end_)
-    {
-        this->front_end = front_end_;
-    }
 
     inline void ALMTrajOpt::setEnvironment(const UnevenMap::Ptr& env)
     {

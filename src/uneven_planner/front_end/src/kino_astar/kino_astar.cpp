@@ -1,4 +1,4 @@
-#include <front_end/kino_astar.h>
+#include <front_end/kino_astar/kino_astar.h>
 
 namespace uneven_planner
 {
@@ -23,8 +23,8 @@ namespace uneven_planner
         front_end_pub = nh.advertise<nav_msgs::Path>("/kino_astar/path", 0);
         if (in_test)
         {
-            wps_sub = nh.subscribe<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1, &KinoAstar::rcvWpsCallBack, this);
-            odom_sub = nh.subscribe<nav_msgs::Odometry>("odom", 1, &KinoAstar::rcvOdomCallBack, this);
+            odom_sub_ptr_ = std::make_shared<OdomSubscriber>(nh, "odom", 5);
+            goal_pose_sub_ptr_ = std::make_shared<GoalPoseSubscriber2D>(nh, "/move_base_simple/goal", 1);
             expanded_pub = nh.advertise<sensor_msgs::PointCloud2>("/kino_astar/expanded_points", 0);
         }
 
@@ -42,29 +42,50 @@ namespace uneven_planner
         model.scale.x = 0.1;
     }
 
-    void KinoAstar::rcvWpsCallBack(const geometry_msgs::PoseStamped msg)
-    {
-        Eigen::Vector3d end_state(msg.pose.position.x, \
-                                  msg.pose.position.y, \
-                                  atan2(2.0*msg.pose.orientation.z*msg.pose.orientation.w, \
-                                        2.0*pow(msg.pose.orientation.w, 2)-1.0)             );
-        
-        plan(odom_pos, end_state);
+
+    void KinoAstar::Run() {
+        ReadData();
+        if (HasStartPose() && HasGoalPose()){
+            InitPoseData();
+            Eigen::Vector3d start_state(current_odom_ptr_->pose.pose.position.x,
+                                        current_odom_ptr_->pose.pose.position.y,
+                                        tf::getYaw(current_odom_ptr_->pose.pose.orientation));
+
+            Eigen::Vector3d end_state(current_goal_pose_ptr_->pose.position.x,
+                                      current_goal_pose_ptr_->pose.position.y,
+                                      tf::getYaw(current_goal_pose_ptr_->pose.orientation));
+
+            if(Plan(start_state, end_state)){
+                visFrontEnd();
+            }
+            else{
+                ROS_INFO("Kino_AStar Planning Fail");
+            }
+            goal_pose_deque_.clear();
+        }
+
+    }
+    void KinoAstar::InitPoseData() {
+        current_goal_pose_ptr_ = goal_pose_deque_.back();
+        if(goal_pose_deque_.size() > 10) goal_pose_deque_.pop_front();
+
+        current_odom_ptr_ = odom_deque_.back();
+        if(odom_deque_.size() > 50) odom_deque_.pop_front();
     }
 
-    void KinoAstar::rcvOdomCallBack(const nav_msgs::OdometryConstPtr& msg)
-    {
-        odom_pos(0) = msg->pose.pose.position.x;
-        odom_pos(1) = msg->pose.pose.position.y;
-        Eigen::Quaterniond q(msg->pose.pose.orientation.w, \
-                             msg->pose.pose.orientation.x, \
-                             msg->pose.pose.orientation.y, \
-                             msg->pose.pose.orientation.z  );
-        Eigen::Matrix3d R(q);
-        odom_pos(2) = UnevenMap::calYawFromR(R);
+    bool KinoAstar::HasStartPose() {
+        return !odom_deque_.empty();
+    }
+    bool KinoAstar::HasGoalPose() {
+        return !goal_pose_deque_.empty();
     }
 
-    std::vector<Eigen::Vector3d> KinoAstar::plan(const Eigen::Vector3d& start_state, const Eigen::Vector3d& end_state)
+    void KinoAstar::ReadData() {
+        goal_pose_sub_ptr_->ParseData(goal_pose_deque_);
+        odom_sub_ptr_->ParseData(odom_deque_);
+    }
+
+    bool KinoAstar::Plan(const Eigen::Vector3d& start_state, const Eigen::Vector3d& end_state)
     {
         // reset
         int use_node_num = 0;
@@ -80,18 +101,17 @@ namespace uneven_planner
             node->parent = NULL;
             node->node_state = NOT_EXPAND;
         }
-        
+
         Eigen::Vector3d end_pt(end_state.head(3));
-        // if (uneven_map->isOccupancy(end_state) == 1)
         if (uneven_map->isOccupancy(start_state) == 1)
         {
             ROS_ERROR("start is not free!!!");
-            return front_end_path;
+            return false;
         }
         if (uneven_map->isOccupancyXY(end_state) == 1)
         {
             ROS_ERROR("goal is not free!!!");
-            return front_end_path;
+            return false;
         }
         ros::Time t0 = ros::Time::now();
         PathNodePtr cur_node = path_node_pool[0];
@@ -122,7 +142,7 @@ namespace uneven_planner
                     std::cout << "front all time: " << (ros::Time::now()-t0).toSec()*1000 << " ms"<<std::endl;
                     retrievePath(cur_node);
                     visFrontEnd();
-                    return front_end_path;
+                    return true;
                 }
             }
 
@@ -212,7 +232,7 @@ namespace uneven_planner
                     if (use_node_num == allocate_num)
                     {
                         std::cout << "run out of memory." << std::endl;
-                        return front_end_path;
+                        return false;
                     }
                 }
                 else if (pro_node->node_state == OPEN)
@@ -232,7 +252,7 @@ namespace uneven_planner
 
         std::cout << "Kino Astar Failed, No path!!!" << std::endl;
 
-        return front_end_path;
+        return false;
     }
 
     void KinoAstar::visFrontEnd()

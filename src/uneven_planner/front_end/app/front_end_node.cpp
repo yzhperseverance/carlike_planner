@@ -1,4 +1,4 @@
-#include "front_end/kino_astar.h"
+#include "front_end/kino_astar/kino_astar.h"
 #include <ros/ros.h>
 
 using namespace uneven_planner;
@@ -16,7 +16,15 @@ int main( int argc, char * argv[] )
     kino_astar.init(nh);
     kino_astar.setEnvironment(uneven_map_ptr);
 
-    ros::spin();
+    ros::Rate rate(10);
+
+    while (ros::ok()) {
+
+        kino_astar.Run();
+
+        ros::spinOnce();
+        rate.sleep();
+    }
 
     return 0;
 }

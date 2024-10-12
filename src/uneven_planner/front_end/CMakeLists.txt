@@ -31,8 +31,10 @@ include_directories(
     ${OMPL_INCLUDE_DIRS}
 )
 
-add_library( front_end 
-    src/kino_astar.cpp
+add_library( front_end
+        src/kino_astar/kino_astar.cpp
+        src/subscriber/odom_subscriber.cpp
+        src/subscriber/goal_pose_subscriber.cpp
 )
 
 target_link_libraries( front_end
@@ -40,7 +42,7 @@ target_link_libraries( front_end
     ${OMPL_LIBRARIES}
 )
 
-add_executable(front_end_node src/front_end_node.cpp )
+add_executable(front_end_node app/front_end_node.cpp)
 
 target_link_libraries( front_end_node
     front_end

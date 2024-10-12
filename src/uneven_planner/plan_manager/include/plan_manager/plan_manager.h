@@ -10,7 +10,7 @@
 #include <nav_msgs/Path.h>
 
 #include "uneven_map/uneven_map.h"
-#include "front_end/kino_astar.h"
+#include "front_end/kino_astar/kino_astar.h"
 #include "back_end/minco_traj_opt/alm_traj_opt.h"
 #include "mpc_controller/SE2Traj.h"
 

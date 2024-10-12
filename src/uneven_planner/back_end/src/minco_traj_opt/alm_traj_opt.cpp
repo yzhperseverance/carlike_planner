@@ -2,7 +2,7 @@
 
 namespace uneven_planner
 {
-    void ALMTrajOpt::init(ros::NodeHandle& nh)
+    ALMTrajOpt::
     {
         nh.getParam("alm_traj_opt/rho_T", rho_T);
         nh.getParam("alm_traj_opt/rho_ter", rho_ter);
@@ -28,13 +28,6 @@ namespace uneven_planner
         nh.getParam("alm_traj_opt/in_test", in_test);
         nh.getParam("alm_traj_opt/in_debug", in_debug);
 
-        se2_pub = nh.advertise<nav_msgs::Path>("/alm/se2_path", 1);
-        se3_pub = nh.advertise<nav_msgs::Path>("/alm/se3_path", 1);
-        if (in_test)
-        {
-            wps_sub = nh.subscribe<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1, &ALMTrajOpt::rcvWpsCallBack, this);
-            odom_sub = nh.subscribe<nav_msgs::Odometry>("odom", 1, &ALMTrajOpt::rcvOdomCallBack, this);
-        }
         if (in_debug)
         {
             debug_pub = nh.advertise<visualization_msgs::Marker>("/alm/debug_path", 1);
@@ -44,128 +37,6 @@ namespace uneven_planner
         return;
     }
 
-    void ALMTrajOpt::rcvOdomCallBack(const nav_msgs::OdometryConstPtr& msg)
-    {
-        odom_pos(0) = msg->pose.pose.position.x;
-        odom_pos(1) = msg->pose.pose.position.y;
-        Eigen::Quaterniond q(msg->pose.pose.orientation.w, \
-                             msg->pose.pose.orientation.x, \
-                             msg->pose.pose.orientation.y, \
-                             msg->pose.pose.orientation.z  );
-        Eigen::Matrix3d R(q);
-        odom_pos(2) = UnevenMap::calYawFromR(R);
-    }
-
-    void ALMTrajOpt::rcvWpsCallBack(const geometry_msgs::PoseStamped msg)
-    {
-        if (in_opt)
-            return;
-        
-        Eigen::Vector3d end_state(msg.pose.position.x, \
-                                  msg.pose.position.y, \
-                                  atan2(2.0*msg.pose.orientation.z*msg.pose.orientation.w, \
-                                        2.0*pow(msg.pose.orientation.w, 2)-1.0)             );
-        
-        std::vector<Eigen::Vector3d> init_path = front_end->plan(odom_pos, end_state);
-        if (init_path.empty())
-            return;
-
-        // smooth yaw TODO：没懂
-        double dyaw;
-        for (size_t i=0; i<init_path.size()-1; i++)
-        {
-            dyaw = init_path[i+1].z() - init_path[i].z();
-            while (dyaw >= M_PI / 2)
-            {
-                init_path[i+1].z() -= M_PI * 2;
-                dyaw = init_path[i+1].z() - init_path[i].z();
-            }
-            while (dyaw <= -M_PI / 2)
-            {
-                init_path[i+1].z() += M_PI * 2;
-                dyaw = init_path[i+1].z() - init_path[i].z();
-            }
-        }
-
-        // init solution
-        Eigen::Matrix<double, 2, 3> init_xy, end_xy;
-        Eigen::Vector3d init_yaw, end_yaw;
-        Eigen::MatrixXd inner_xy;
-        Eigen::VectorXd inner_yaw;
-        double total_time;
-    
-        init_xy << init_path[0].x(), 0.0, 0.0, \
-                   init_path[0].y(), 0.0, 0.0;
-        end_xy << init_path.back().x(), 0.0, 0.0, \
-                   init_path.back().y(), 0.0, 0.0;
-        init_yaw << init_path[0].z(), 0.0, 0.0;
-        end_yaw << init_path.back().z(), 0.0, 0.0;
-
-        // 为什么要乘0.05？？？可能是因为这是约束条件，表示方向即可，所以乘了一个系数让他缩小
-        // 这就是控制开始位姿和结束位姿的方法！？
-        init_xy.col(1) << 0.05 * cos(init_yaw(0)), 0.05 * sin(init_yaw(0));
-        end_xy.col(1) << 0.05 * cos(end_yaw(0)), 0.05 * sin(end_yaw(0));
-        
-        double temp_len_yaw = 0.0;
-        double temp_len_pos = 0.0;
-        double total_len = 0.0;
-        double piece_len = 0.3;
-        double piece_len_yaw = piece_len / 2.0; // 意思就是yaw插入的点更细致呗
-        std::vector<Eigen::Vector2d> inner_xy_node;
-        std::vector<double> inner_yaw_node;
-        // 在一条初始化路径（init_path）中插入一些内部节点
-        for (int k=0; k<init_path.size()-1; k++)
-        {
-            double temp_seg = (init_path[k+1] - init_path[k]).head(2).norm();
-            temp_len_yaw += temp_seg;
-            temp_len_pos += temp_seg;
-            total_len += temp_seg;
-            // 这里不应该是while吗？
-            if (temp_len_yaw > piece_len_yaw)
-            {
-                double temp_yaw = init_path[k].z() + (1.0 - (temp_len_yaw-piece_len_yaw) / temp_seg) * (init_path[k+1] - init_path[k]).z();
-                inner_yaw_node.push_back(temp_yaw);
-                temp_len_yaw -= piece_len_yaw;
-            }
-            if (temp_len_pos > piece_len)
-            {
-                Eigen::Vector3d temp_node = init_path[k] + (1.0 - (temp_len_pos-piece_len) / temp_seg) * (init_path[k+1] - init_path[k]);
-                inner_xy_node.push_back(temp_node.head(2));
-                inner_yaw_node.push_back(temp_node.z()); // 这俩还不完全分开？？这还插入yaw？
-                temp_len_pos -= piece_len;
-            }
-        }
-        // 这tm明显计算的有问题啊，太逆天了，纯是工程trick
-        total_time = total_len / max_vel * 1.2;
-        inner_xy.resize(2, inner_xy_node.size());
-        inner_yaw.resize(inner_yaw_node.size());
-        for (int i=0; i<inner_xy_node.size(); i++)
-        {
-            inner_xy.col(i) = inner_xy_node[i];
-        }
-        for (int i=0; i<inner_yaw_node.size(); i++)
-        {
-            inner_yaw(i) = inner_yaw_node[i];
-        }
-    
-        optimizeSE2Traj(init_xy, end_xy, inner_xy, \
-                        init_yaw, end_yaw, inner_yaw, total_time);
-        
-        // visualization
-        SE2Trajectory back_end_traj = getTraj();
-        visSE2Traj(back_end_traj);
-        visSE3Traj(back_end_traj);
-        std::vector<double> max_terrain_value = getMaxVxAxAyCurAttSig(back_end_traj);
-        std::cout << "equal error: "<< back_end_traj.getNonHolError() << std::endl;
-        std::cout << "max vx rate: "<< max_terrain_value[0] << std::endl;
-        std::cout << "max ax rate: "<< max_terrain_value[1] << std::endl;
-        std::cout << "max ay rate: "<< max_terrain_value[2] << std::endl;
-        std::cout << "max cur:     "<< max_terrain_value[3] << std::endl;
-        std::cout << "min cosxi:   "<< -max_terrain_value[4] << std::endl;
-        std::cout << "max sigma:   "<< max_terrain_value[5] << std::endl;
-        
-        return;
-    }
 
     static double innerCallback(void* ptrObj, const Eigen::VectorXd& x, Eigen::VectorXd& grad);
     static int earlyExit(void* ptrObj, const Eigen::VectorXd& x, const Eigen::VectorXd& grad, 
@@ -1088,77 +959,4 @@ namespace uneven_planner
         debug_pub.publish(line_strip);
     }
 
-    void ALMTrajOpt::visSE2Traj(const SE2Trajectory& traj)
-    {
-        nav_msgs::Path back_end_path;
-        back_end_path.header.frame_id = "world";
-        back_end_path.header.stamp = ros::Time::now();
-        
-        geometry_msgs::PoseStamped p;
-        for (double t=0.0; t<traj.getTotalDuration(); t+=0.03)
-        {
-            Eigen::Vector2d pos = traj.getPos(t);
-            double yaw = traj.getAngle(t);
-            p.pose.position.x = pos(0);
-            p.pose.position.y = pos(1);
-            p.pose.position.z = 0.0;
-            p.pose.orientation.w = cos(yaw/2.0);
-            p.pose.orientation.x = 0.0;
-            p.pose.orientation.y = 0.0;
-            p.pose.orientation.z = sin(yaw/2.0);
-            back_end_path.poses.push_back(p);
-        }
-        Eigen::Vector2d pos = traj.getPos(traj.getTotalDuration());
-        double yaw = traj.getAngle(traj.getTotalDuration());
-        p.pose.position.x = pos(0);
-        p.pose.position.y = pos(1);
-        p.pose.position.z = 0.0;
-        p.pose.orientation.w = cos(yaw/2.0);
-        p.pose.orientation.x = 0.0;
-        p.pose.orientation.y = 0.0;
-        p.pose.orientation.z = sin(yaw/2.0);
-        back_end_path.poses.push_back(p);
-
-        se2_pub.publish(back_end_path);
-    }
-
-    void ALMTrajOpt::visSE3Traj(const SE2Trajectory& traj)
-    {
-        nav_msgs::Path back_end_path;
-        back_end_path.header.frame_id = "world";
-        back_end_path.header.stamp = ros::Time::now();
-        
-        geometry_msgs::PoseStamped p;
-        for (double t=0.0; t<traj.getTotalDuration(); t+=0.03)
-        {
-            Eigen::Vector3d pos = traj.getNormSE2Pos(t);
-            Eigen::Vector3d pos_3d;
-            Eigen::Matrix3d R;
-            uneven_map->getTerrainPos(pos, R, pos_3d);
-            p.pose.position.x = pos_3d(0);
-            p.pose.position.y = pos_3d(1);
-            p.pose.position.z = pos_3d(2);
-            Eigen::Quaterniond q(R);
-            p.pose.orientation.w = q.w();
-            p.pose.orientation.x = q.x();
-            p.pose.orientation.y = q.y();
-            p.pose.orientation.z = q.z();
-            back_end_path.poses.push_back(p);
-        }
-        Eigen::Vector3d pos = traj.getNormSE2Pos(traj.getTotalDuration());
-        Eigen::Vector3d pos_3d;
-        Eigen::Matrix3d R;
-        uneven_map->getTerrainPos(pos, R, pos_3d);
-        p.pose.position.x = pos_3d(0);
-        p.pose.position.y = pos_3d(1);
-        p.pose.position.z = pos_3d(2);
-        Eigen::Quaterniond q(R);
-        p.pose.orientation.w = q.w();
-        p.pose.orientation.x = q.x();
-        p.pose.orientation.y = q.y();
-        p.pose.orientation.z = q.z();
-        back_end_path.poses.push_back(p);
-
-        se3_pub.publish(back_end_path);
-    }
 }

@@ -3,38 +3,225 @@
 //
 #include "back_end/minco_traj_opt/alm_traj_opt_flow.h"
 
+namespace uneven_planner {
+    AlmTrajOptFlow::AlmTrajOptFlow(ros::NodeHandle &nh) {
+        path_sub_ptr_ = std::make_shared<PathSubscriber>(nh, "/kino_astar/path", 5);
+        alm_traj_ptr_ = std::make_shared<ALMTrajOpt>();
 
-AlmTrajOptFlow::AlmTrajOptFlow(ros::NodeHandle &nh) {
-    odom_sub_ptr_ = std::make_shared<OdomSubscriber>(nh, "odom", 5);
-    wps_sub = nh.subscribe<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1, &AlmTrajOptFlow::rcvWpsCallBack, this);
+        se2_pub = nh.advertise<nav_msgs::Path>("/alm/se2_path", 1);
+        se3_pub = nh.advertise<nav_msgs::Path>("/alm/se3_path", 1);
 
-    const double rho_T = nh.param("alm_traj_opt/rho_T", rho_T);
-    const double rho_ter = nh.param("alm_traj_opt/rho_ter", rho_ter);
-    const double max_vel = nh.param("alm_traj_opt/max_vel", max_vel);
-    const double max_acc_lon = nh.param("alm_traj_opt/max_acc_lon", max_acc_lon);
-    const double max_acc_lat = nh.param("alm_traj_opt/max_acc_lat", max_acc_lat);
-    const double max_kap = nh.param("alm_traj_opt/max_kap", max_kap);
-    const double min_cxi = nh.param("alm_traj_opt/min_cxi", min_cxi);
-    const double max_sig = nh.param("alm_traj_opt/max_sig", max_sig);
-    const bool use_scaling = nh.param("alm_traj_opt/use_scaling", use_scaling);
-    const double rho = nh.param("alm_traj_opt/rho", rho);
-    const double beta = nh.param("alm_traj_opt/beta", beta);
-    const double gamma = nh.param("alm_traj_opt/gamma", gamma);
-    const double epsilon_con = nh.param("alm_traj_opt/epsilon_con", epsilon_con);
-    const int max_iter = nh.param("alm_traj_opt/max_iter", max_iter);
-    const double g_epsilon = nh.param("alm_traj_opt/g_epsilon", g_epsilon);
-    const double min_step = nh.param("alm_traj_opt/min_step", min_step);
-    const int inner_max_iter = nh.param("alm_traj_opt/inner_max_iter", inner_max_iter);
-    const double delta = nh.param("alm_traj_opt/delta", delta);
-    const int mem_size = nh.param("alm_traj_opt/mem_size", mem_size);
-    const int past = nh.param("alm_traj_opt/past", past);
-    const double int_K = nh.param("alm_traj_opt/int_K", int_K);
-    const bool in_test = nh.param("alm_traj_opt/in_test", in_test);
-    const bool in_debug = nh.param("alm_traj_opt/in_debug", in_debug);
+        nh.getParam("alm_traj_opt/max_vel", max_vel_);
 
-}
+    }
+
+    void AlmTrajOptFlow::ConvertPathToInitPath() {
+        // 清空 init_path，防止追加到已有数据后
+        init_path_.clear();
+
+        // 遍历 current_path_ptr 中的每个路径点
+        for (const auto &pose_stamped: current_path_ptr_->poses) {
+            // 提取路径点的 x 和 y 坐标
+            double x = pose_stamped.pose.position.x;
+            double y = pose_stamped.pose.position.y;
+
+            // 从四元数计算偏航角 (Yaw)
+            tf::Quaternion q(
+                    pose_stamped.pose.orientation.x,
+                    pose_stamped.pose.orientation.y,
+                    pose_stamped.pose.orientation.z,
+                    pose_stamped.pose.orientation.w
+            );
+            double yaw = tf::getYaw(q);  // 提取 yaw 角
+
+            // 将 (x, y, yaw) 组成 Eigen::Vector3d 并存入 init_path
+            init_path_.emplace_back(x, y, yaw);
+        }
+    }
+
+    void AlmTrajOptFlow::Run() {
+        ReadData();
+
+        if (HasPath()) {
+            InitData();
+
+            SmoothYaw();
+            // init solution
+            Eigen::Matrix<double, 2, 3> init_xy, end_xy;
+            Eigen::Vector3d init_yaw, end_yaw;
+            Eigen::MatrixXd inner_xy;
+            Eigen::VectorXd inner_yaw;
+            double total_time;
+
+            init_xy << init_path_[0].x(), 0.0, 0.0, \
+                   init_path_[0].y(), 0.0, 0.0;
+            end_xy << init_path_.back().x(), 0.0, 0.0, \
+                   init_path_.back().y(), 0.0, 0.0;
+            init_yaw << init_path_[0].z(), 0.0, 0.0;
+            end_yaw << init_path_.back().z(), 0.0, 0.0;
+
+            // 为什么要乘0.05？？？可能是因为这是约束条件，表示方向即可，所以乘了一个系数让他缩小
+            // 这就是控制开始位姿和结束位姿的方法！？
+            init_xy.col(1) << 0.05 * cos(init_yaw(0)), 0.05 * sin(init_yaw(0));
+            end_xy.col(1) << 0.05 * cos(end_yaw(0)), 0.05 * sin(end_yaw(0));
+
+            GetInnerPoint(inner_xy, inner_yaw, total_time);
+
+            alm_traj_ptr_->optimizeSE2Traj(init_xy, end_xy, inner_xy, \
+                        init_yaw, end_yaw, inner_yaw, total_time);
+
+            SE2Trajectory back_end_traj = alm_traj_ptr_->getTraj();
+            PublishSE2Traj(back_end_traj);
+            PublishSE3Traj(back_end_traj);
+
+            path_deque_.clear();
+        }
+
+    }
 
 
-void AlmTrajOptFlow::run() {
+    void AlmTrajOptFlow::InitData() {
+        current_path_ptr_ = path_deque_.back();
+        ConvertPathToInitPath();
+    }
 
+    bool AlmTrajOptFlow::HasPath() {
+        return !path_deque_.empty();
+    }
+
+
+    void AlmTrajOptFlow::ReadData() {
+        path_sub_ptr_->ParseData(path_deque_);
+    }
+
+    void AlmTrajOptFlow::SmoothYaw() {
+        double dyaw;
+        for (size_t i = 0; i < init_path_.size(); i++) {
+            dyaw = init_path_[i + 1].z() - init_path_[i].z();
+            while (dyaw >= M_PI / 2) {
+                init_path_[i + 1].z() -= M_PI * 2;
+                dyaw = init_path_[i + 1].z() - init_path_[i].z();
+            }
+            while (dyaw <= -M_PI / 2) {
+                init_path_[i + 1].z() += M_PI * 2;
+                dyaw = init_path_[i + 1].z() - init_path_[i].z();
+            }
+        }
+
+    }
+
+    void AlmTrajOptFlow::GetInnerPoint(Eigen::MatrixXd &inner_xy, Eigen::VectorXd &inner_yaw, double &total_time) {
+        double temp_len_yaw = 0.0;
+        double temp_len_pos = 0.0;
+        double total_len = 0.0;
+        double piece_len = 0.3;
+        double piece_len_yaw = piece_len / 2.0; // 意思就是yaw插入的点更细致呗
+        std::vector<Eigen::Vector2d> inner_xy_node;
+        std::vector<double> inner_yaw_node;
+        // 在一条初始化路径（init_path）中插入一些内部节点
+        for (int k = 0; k < init_path_.size() - 1; k++) {
+            double temp_seg = (init_path_[k + 1] - init_path_[k]).head(2).norm();
+            temp_len_yaw += temp_seg;
+            temp_len_pos += temp_seg;
+            total_len += temp_seg;
+            // 这里不应该是while吗？
+            if (temp_len_yaw > piece_len_yaw) {
+                double temp_yaw = init_path_[k].z() + (1.0 - (temp_len_yaw - piece_len_yaw) / temp_seg) *
+                                                      (init_path_[k + 1] - init_path_[k]).z();
+                inner_yaw_node.push_back(temp_yaw);
+                temp_len_yaw -= piece_len_yaw;
+            }
+            if (temp_len_pos > piece_len) {
+                Eigen::Vector3d temp_node = init_path_[k] + (1.0 - (temp_len_pos - piece_len) / temp_seg) *
+                                                            (init_path_[k + 1] - init_path_[k]);
+                inner_xy_node.push_back(temp_node.head(2));
+                inner_yaw_node.push_back(temp_node.z()); // 这俩还不完全分开？？这还插入yaw？
+                temp_len_pos -= piece_len;
+            }
+        }
+        // 这tm明显计算的有问题啊，太逆天了，纯是工程trick
+        total_time = total_len / max_vel_ * 1.2;
+        inner_xy.resize(2, inner_xy_node.size());
+        inner_yaw.resize(inner_yaw_node.size());
+        for (int i = 0; i < inner_xy_node.size(); i++) {
+            inner_xy.col(i) = inner_xy_node[i];
+        }
+        for (int i = 0; i < inner_yaw_node.size(); i++) {
+            inner_yaw(i) = inner_yaw_node[i];
+        }
+    }
+
+    void AlmTrajOptFlow::PublishSE2Traj(const SE2Trajectory& traj)
+    {
+        nav_msgs::Path back_end_path;
+        back_end_path.header.frame_id = "world";
+        back_end_path.header.stamp = ros::Time::now();
+
+        geometry_msgs::PoseStamped p;
+        for (double t=0.0; t<traj.getTotalDuration(); t+=0.03)
+        {
+            Eigen::Vector2d pos = traj.getPos(t);
+            double yaw = traj.getAngle(t);
+            p.pose.position.x = pos(0);
+            p.pose.position.y = pos(1);
+            p.pose.position.z = 0.0;
+            p.pose.orientation.w = cos(yaw/2.0);
+            p.pose.orientation.x = 0.0;
+            p.pose.orientation.y = 0.0;
+            p.pose.orientation.z = sin(yaw/2.0);
+            back_end_path.poses.push_back(p);
+        }
+        Eigen::Vector2d pos = traj.getPos(traj.getTotalDuration());
+        double yaw = traj.getAngle(traj.getTotalDuration());
+        p.pose.position.x = pos(0);
+        p.pose.position.y = pos(1);
+        p.pose.position.z = 0.0;
+        p.pose.orientation.w = cos(yaw/2.0);
+        p.pose.orientation.x = 0.0;
+        p.pose.orientation.y = 0.0;
+        p.pose.orientation.z = sin(yaw/2.0);
+        back_end_path.poses.push_back(p);
+
+        se2_pub.publish(back_end_path);
+    }
+
+    void ALMTrajOpt::PublishSE3Traj(const SE2Trajectory& traj)
+    {
+        nav_msgs::Path back_end_path;
+        back_end_path.header.frame_id = "world";
+        back_end_path.header.stamp = ros::Time::now();
+
+        geometry_msgs::PoseStamped p;
+        for (double t=0.0; t<traj.getTotalDuration(); t+=0.03)
+        {
+            Eigen::Vector3d pos = traj.getNormSE2Pos(t);
+            Eigen::Vector3d pos_3d;
+            Eigen::Matrix3d R;
+            uneven_map->getTerrainPos(pos, R, pos_3d);
+            p.pose.position.x = pos_3d(0);
+            p.pose.position.y = pos_3d(1);
+            p.pose.position.z = pos_3d(2);
+            Eigen::Quaterniond q(R);
+            p.pose.orientation.w = q.w();
+            p.pose.orientation.x = q.x();
+            p.pose.orientation.y = q.y();
+            p.pose.orientation.z = q.z();
+            back_end_path.poses.push_back(p);
+        }
+        Eigen::Vector3d pos = traj.getNormSE2Pos(traj.getTotalDuration());
+        Eigen::Vector3d pos_3d;
+        Eigen::Matrix3d R;
+        uneven_map->getTerrainPos(pos, R, pos_3d);
+        p.pose.position.x = pos_3d(0);
+        p.pose.position.y = pos_3d(1);
+        p.pose.position.z = pos_3d(2);
+        Eigen::Quaterniond q(R);
+        p.pose.orientation.w = q.w();
+        p.pose.orientation.x = q.x();
+        p.pose.orientation.y = q.y();
+        p.pose.orientation.z = q.z();
+        back_end_path.poses.push_back(p);
+
+        se3_pub.publish(back_end_path);
+    }
 }
