@@ -2,7 +2,7 @@
 
 namespace uneven_planner
 {
-    ALMTrajOpt::
+    ALMTrajOpt::ALMTrajOpt(ros::NodeHandle &nh)
     {
         nh.getParam("alm_traj_opt/rho_T", rho_T);
         nh.getParam("alm_traj_opt/rho_ter", rho_ter);
@@ -52,8 +52,6 @@ namespace uneven_planner
                                     const double & totalTime            )
     {
         int ret_code = 0;
-        
-        in_opt = true;
 
         piece_xy = innerPtsXY.cols() + 1;
         piece_yaw = innerPtsYaw.size() + 1;
@@ -149,8 +147,7 @@ namespace uneven_planner
         }
         ROS_INFO_STREAM("[ALM] Time consuming: "<<(ros::Time::now()-start_time).toSec() * 1000.0 << " ms");
         ROS_INFO_STREAM("[ALM] Jerk cost: "<<minco_se2.getTrajJerkCost() << " traj time:" << minco_se2.getTraj().getTotalDuration());
-        
-        in_opt = false;
+
         
         return ret_code;
     }
@@ -673,23 +670,6 @@ namespace uneven_planner
                 inv_cos_xi = terrain_values[5];
                 sigma = terrain_values[6];
 
-                // debug
-                // inv_cos_vphix = 1.0;
-                // sin_phix = 0.0;
-                // inv_cos_vphiy = 1.0;
-                // sin_phiy = 0.0;
-                // cos_xi = 1.0;
-                // inv_cos_xi = 1.0;
-                // sigma = 0.0;
-                // // terrain_grads[0].setZero();
-                // // terrain_grads[1].setZero();
-                // // terrain_grads[2].setZero();
-                // // terrain_grads[3].setZero();
-                // // terrain_grads[4].setZero();
-                // // terrain_grads[5].setZero();
-                // // terrain_grads[6].setZero();
-                // for (size_t i=0; i<terrain_grads.size(); i++)
-                //     terrain_grads[i].setZero();
 
                 grad_inv_cos_vphix = terrain_grads[0];
                 grad_sin_phix = terrain_grads[1];

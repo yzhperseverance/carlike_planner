@@ -6,7 +6,7 @@
 namespace uneven_planner {
     AlmTrajOptFlow::AlmTrajOptFlow(ros::NodeHandle &nh) {
         path_sub_ptr_ = std::make_shared<PathSubscriber>(nh, "/kino_astar/path", 5);
-        alm_traj_ptr_ = std::make_shared<ALMTrajOpt>();
+        alm_traj_ptr_ = std::make_shared<ALMTrajOpt>(nh);
 
         se2_pub = nh.advertise<nav_msgs::Path>("/alm/se2_path", 1);
         se3_pub = nh.advertise<nav_msgs::Path>("/alm/se3_path", 1);
@@ -185,7 +185,8 @@ namespace uneven_planner {
         se2_pub.publish(back_end_path);
     }
 
-    void ALMTrajOpt::PublishSE3Traj(const SE2Trajectory& traj)
+    /*
+    void AlmTrajOptFlow::PublishSE3Traj(const SE2Trajectory& traj)
     {
         nav_msgs::Path back_end_path;
         back_end_path.header.frame_id = "world";
@@ -224,4 +225,5 @@ namespace uneven_planner {
 
         se3_pub.publish(back_end_path);
     }
+    */
 }

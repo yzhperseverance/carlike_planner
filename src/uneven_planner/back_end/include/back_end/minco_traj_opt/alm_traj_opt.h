@@ -79,7 +79,11 @@ namespace uneven_planner
 
         public:
             void init(ros::NodeHandle& nh);
-            ALMTrajOpt();
+
+            ALMTrajOpt() = delete;
+
+            explicit ALMTrajOpt(ros::NodeHandle &nh);
+
             int optimizeSE2Traj(const Eigen::MatrixXd &initStateXY, \
                                 const Eigen::MatrixXd &endStateXY , \
                                 const Eigen::MatrixXd &innerPtsXY , \
@@ -88,7 +92,6 @@ namespace uneven_planner
                                 const Eigen::VectorXd &innerPtsYaw, \
                                 const double & totalTime            );
 
-        private:
             void initScaling(Eigen::VectorXd x0);
             void calConstrainCostGrad(double& cost, Eigen::MatrixXd& gdCxy, Eigen::VectorXd &gdTxy, \
                                       Eigen::MatrixXd& gdCyaw, Eigen::VectorXd &gdTyaw);
