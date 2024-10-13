@@ -17,6 +17,11 @@ namespace uneven_planner
     constexpr double sig_scale = 1000.0;
     constexpr double scale_trick_jerk = 1000.0;
 
+    enum TERRAIN_INDEX {
+        inv_cos_vphix = 0, sin_phix, inv_cos_vphiy, sin_phiy,
+        cos_xi, inv_cos_xi, sigma
+    };
+
     class ALMTrajOpt
     {
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -95,6 +100,10 @@ namespace uneven_planner
             void initScaling(Eigen::VectorXd x0);
             void calConstrainCostGrad(double& cost, Eigen::MatrixXd& gdCxy, Eigen::VectorXd &gdTxy, \
                                       Eigen::MatrixXd& gdCyaw, Eigen::VectorXd &gdTyaw);
+
+            void computeBeta(double s, Eigen::Matrix<double, 6, 1> &beta0, Eigen::Matrix<double, 6, 1> &beta1,
+                         Eigen::Matrix<double, 6, 1> &beta2, Eigen::Matrix<double, 6, 1> &beta3);
+
             void pubDebugTraj(const SE2Trajectory& traj);
 
 
