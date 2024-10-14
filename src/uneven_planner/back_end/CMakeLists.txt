@@ -33,14 +33,13 @@ include_directories(
 add_library(back_end
         src/minco_traj_opt/alm_traj_opt.cpp
         src/minco_traj_opt/alm_traj_opt_flow.cpp
-        src/suscriber/path_subscriber.cpp
 )
 
 target_link_libraries(back_end
     ${catkin_LIBRARIES}
 )
 
-add_executable(back_end_node src/back_end_node.cpp )
+add_executable(back_end_node app/back_end_node.cpp)
 
 target_link_libraries(back_end_node
     back_end

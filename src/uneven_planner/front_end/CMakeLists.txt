@@ -32,9 +32,7 @@ include_directories(
 )
 
 add_library( front_end
-        src/kino_astar/kino_astar.cpp
-        src/subscriber/odom_subscriber.cpp
-        src/subscriber/goal_pose_subscriber.cpp
+        src/kino_astar.cpp
 )
 
 target_link_libraries( front_end

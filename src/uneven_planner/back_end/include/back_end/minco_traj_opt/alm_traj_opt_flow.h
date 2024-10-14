@@ -6,7 +6,6 @@
 #include <Eigen/Core>
 #include <tf/tf.h>
 #include <geometry_msgs/PoseStamped.h>
-#include "back_end/subscriber/path_subscriber.h"
 #include "back_end/minco_traj_opt/alm_traj_opt.h"
 #include "utils/se2traj.hpp"
 namespace uneven_planner {
@@ -17,17 +16,12 @@ namespace uneven_planner {
 
         explicit AlmTrajOptFlow(ros::NodeHandle &nh);
 
-        void Run();
+        void Run(const std::vector<Eigen::Vector3d> &init_path);
 
+        inline void SetEnvironment(const UnevenMap::Ptr& env) { alm_traj_ptr_->setEnvironment(env); }
+
+        inline SE2Trajectory GetTraj() { return alm_traj_ptr_->getTraj(); }
     private:
-
-        bool HasPath();
-
-        void InitData();
-
-        void ReadData();
-
-        void ConvertPathToInitPath();
 
         void SmoothYaw();
 
@@ -39,10 +33,7 @@ namespace uneven_planner {
 
     private:
         std::shared_ptr<ALMTrajOpt> alm_traj_ptr_;
-        std::shared_ptr<PathSubscriber> path_sub_ptr_;
-        std::deque<nav_msgs::PathPtr> path_deque_;
 
-        nav_msgs::PathPtr current_path_ptr_;
         std::vector<Eigen::Vector3d> init_path_;
 
         ros::Publisher se2_pub;

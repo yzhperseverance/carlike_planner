@@ -83,7 +83,6 @@ namespace uneven_planner
             ros::Publisher debug_pub;
 
         public:
-            void init(ros::NodeHandle& nh);
 
             ALMTrajOpt() = delete;
 

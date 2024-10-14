@@ -22,9 +22,7 @@
 #include <ompl/base/spaces/DubinsStateSpace.h>
 #include <ompl/geometric/SimpleSetup.h>
 
-#include "../../../../uneven_map/include/uneven_map/uneven_map.h"
-#include "front_end/subscriber/goal_pose_subscriber.h"
-#include "front_end/subscriber/odom_subscriber.h"
+#include "uneven_map/uneven_map.h"
 #define inf 1 >> 30
 #define PI_X_2 6.283185307179586
 #define CLOSE 'a'
@@ -137,14 +135,7 @@ namespace uneven_planner
             ros::Publisher expanded_pub;
             visualization_msgs::Marker model;
             Eigen::Vector3d odom_pos;
-            std::shared_ptr<OdomSubscriber>  odom_sub_ptr_;
-            std::shared_ptr<GoalPoseSubscriber2D> goal_pose_sub_ptr_;
 
-            std::deque<geometry_msgs::PoseStampedPtr> goal_pose_deque_;
-            std::deque<nav_msgs::OdometryConstPtr> odom_deque_;
-
-            geometry_msgs::PoseStampedPtr current_goal_pose_ptr_;
-            nav_msgs::OdometryConstPtr current_odom_ptr_;
 
     public:
             KinoAstar() {}
@@ -154,25 +145,17 @@ namespace uneven_planner
                     delete path_node_pool[i];
             }
 
-            void Run();
 
             void init(ros::NodeHandle& nh);
 
             inline void setEnvironment(const UnevenMap::Ptr& env);
 
-    private:
 
             void visFrontEnd();
             void visExpanded();
-            void InitPoseData();
 
-            bool HasStartPose();
 
-            bool HasGoalPose();
-
-            void ReadData();
-
-            bool Plan(const Eigen::Vector3d& start_state, const Eigen::Vector3d& end_state);
+            std::vector<Eigen::Vector3d> Plan(const Eigen::Vector3d& start_state, const Eigen::Vector3d& end_state);
 
 
 

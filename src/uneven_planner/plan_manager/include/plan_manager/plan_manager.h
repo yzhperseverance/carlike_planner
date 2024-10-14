@@ -10,8 +10,9 @@
 #include <nav_msgs/Path.h>
 
 #include "uneven_map/uneven_map.h"
-#include "front_end/kino_astar/kino_astar.h"
+#include "kino_astar.h"
 #include "back_end/minco_traj_opt/alm_traj_opt.h"
+#include "back_end/minco_traj_opt/alm_traj_opt_flow.h"
 #include "mpc_controller/SE2Traj.h"
 
 namespace uneven_planner
@@ -30,7 +31,7 @@ namespace uneven_planner
 
             UnevenMap::Ptr uneven_map;
             KinoAstar::Ptr kino_astar;
-            ALMTrajOpt traj_opt;
+            std::shared_ptr<AlmTrajOptFlow> traj_opt_flow;
             SE2Trajectory opted_traj;
 
             ros::Publisher traj_pub;
