@@ -16,7 +16,10 @@ namespace uneven_planner {
 
     void AlmTrajOptFlow::Run(const std::vector<Eigen::Vector3d> &init_path) {
         init_path_.clear();
-        init_path_ = init_path;
+        //init_path_ = init_path;
+        for(auto &point: init_path){
+            init_path_.push_back(point);
+        }
         SmoothYaw();
         // init solution
         Eigen::Matrix<double, 2, 3> init_xy, end_xy;
@@ -38,7 +41,6 @@ namespace uneven_planner {
         end_xy.col(1) << 0.05 * cos(end_yaw(0)), 0.05 * sin(end_yaw(0));
 
         GetInnerPoint(inner_xy, inner_yaw, total_time);
-
 
         alm_traj_ptr_->optimizeSE2Traj(init_xy, end_xy, inner_xy, \
                     init_yaw, end_yaw, inner_yaw, total_time);
@@ -89,13 +91,13 @@ namespace uneven_planner {
                 Eigen::Vector3d temp_node = init_path_[k] + (1.0 - (temp_len_pos - piece_len) / temp_seg) *
                                                             (init_path_[k + 1] - init_path_[k]);
 
+                std::cout << temp_node.head(2) << std::endl;
                 inner_xy_node.emplace_back(temp_node.head(2));
                 inner_yaw_node.push_back(temp_node.z()); // 这俩还不完全分开？？这还插入yaw？
                 temp_len_pos -= piece_len;
             }
         }
         // 这tm明显计算的有问题啊，太逆天了，纯是工程trick
-
         total_time = total_len / max_vel_ * 1.2;
         inner_xy.resize(2, inner_xy_node.size());
         inner_yaw.resize(inner_yaw_node.size());
@@ -105,6 +107,7 @@ namespace uneven_planner {
         for (int i = 0; i < inner_yaw_node.size(); i++) {
             inner_yaw(i) = inner_yaw_node[i];
         }
+
     }
 
     void AlmTrajOptFlow::PublishSE2Traj(const SE2Trajectory& traj)

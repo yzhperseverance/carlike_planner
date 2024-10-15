@@ -630,7 +630,7 @@ namespace uneven_planner
                 gdTxy(i) += user_cost / int_K; // TODO：这为啥这么算？？
                 // hx是等式约束，gx是不等式约束
                 // non-holonomic
-                // 拉格朗日乘子法特有的惩罚变量吧
+                // 这里保证了xy和yaw的方向不会冲突，因为只有速度方向和yaw的方向一致这项才会趋于0
                 double nonh_lambda = lambda[equal_idx];
                 Eigen::Vector2d non_holonomic_yaw(syaw, -cyaw);
                 hx[equal_idx] = vel.dot(non_holonomic_yaw) * scale_cx(constrain_idx);

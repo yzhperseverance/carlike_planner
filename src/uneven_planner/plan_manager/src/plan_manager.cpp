@@ -13,11 +13,12 @@ namespace uneven_planner
 
         uneven_map.reset(new UnevenMap);
         kino_astar.reset(new KinoAstar);
-        
+        traj_opt_flow.reset(new AlmTrajOptFlow(nh));
+
         uneven_map->init(nh);
         kino_astar->init(nh);
         kino_astar->setEnvironment(uneven_map);
-        traj_opt_flow = std::make_shared<AlmTrajOptFlow>(nh);
+
         traj_opt_flow->SetEnvironment(uneven_map);
 
         traj_pub = nh.advertise<mpc_controller::SE2Traj>("traj", 1);
