@@ -18,6 +18,8 @@ namespace uneven_planner {
 
         void Run(const std::vector<Eigen::Vector3d> &init_path);
 
+        inline void SetEnvironment(const EDTEnvironment::Ptr& env) { alm_traj_ptr_->setEnvironment(env); }
+
         inline void SetEnvironment(const UnevenMap::Ptr& env) { alm_traj_ptr_->setEnvironment(env); }
 
         inline SE2Trajectory GetTraj() { return alm_traj_ptr_->getTraj(); }

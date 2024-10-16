@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   visualization_msgs
   uneven_map
   front_end
+  plan_env
 )
 
 find_package(Eigen3 REQUIRED)
@@ -20,7 +21,7 @@ message(STATUS "Eigen3 Include Dir: ${EIGEN3_INCLUDE_DIR}")
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES back_end
- CATKIN_DEPENDS roscpp std_msgs uneven_map visualization_msgs front_end
+ CATKIN_DEPENDS roscpp std_msgs uneven_map visualization_msgs front_end plan_env
 )
 
 include_directories( 

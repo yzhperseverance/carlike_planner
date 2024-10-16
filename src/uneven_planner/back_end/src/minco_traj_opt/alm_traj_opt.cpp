@@ -284,8 +284,8 @@ namespace uneven_planner
         double          grad_ay = 0.0;
         Eigen::Matrix<double, 6, 1> beta0_xy, beta1_xy, beta2_xy, beta3_xy;
         Eigen::Matrix<double, 6, 1> beta0_yaw, beta1_yaw, beta2_yaw, beta3_yaw;
-        double s1, s2, s3, s4, s5;
-        double s1_yaw, s2_yaw, s3_yaw, s4_yaw, s5_yaw;
+        double s1;
+        double s1_yaw;
         double step, alpha, omega;
 
         int constrain_idx = 0;
@@ -544,8 +544,8 @@ namespace uneven_planner
         double          grad_ay = 0.0;
         Eigen::Matrix<double, 6, 1> beta0_xy, beta1_xy, beta2_xy, beta3_xy;
         Eigen::Matrix<double, 6, 1> beta0_yaw, beta1_yaw, beta2_yaw, beta3_yaw;
-        double s1, s2, s3, s4, s5;
-        double s1_yaw, s2_yaw, s3_yaw, s4_yaw, s5_yaw;
+        double s1;
+        double s1_yaw;
         double step, alpha, omega;
 
         int equal_idx = 0;
