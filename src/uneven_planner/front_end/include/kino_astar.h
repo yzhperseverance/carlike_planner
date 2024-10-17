@@ -22,7 +22,8 @@
 #include <ompl/base/spaces/DubinsStateSpace.h>
 #include <ompl/geometric/SimpleSetup.h>
 
-#include "uneven_map/uneven_map.h"
+#include "plan_env/uneven_map.h"
+#include "plan_env/edt_environment.h"
 #define inf 1 >> 30
 #define PI_X_2 6.283185307179586
 #define CLOSE 'a'
@@ -101,6 +102,7 @@ namespace uneven_planner
         private:
             // datas
             UnevenMap::Ptr uneven_map;
+            EDTEnvironment::Ptr edt_environment_;
             std::vector<PathNodePtr> path_node_pool;
             NodeHashTable<PathNodePtr> expanded_nodes;
             pcl::PointCloud<pcl::PointXYZ> expanded_points;
@@ -150,6 +152,7 @@ namespace uneven_planner
 
             inline void setEnvironment(const UnevenMap::Ptr& env);
 
+            inline void setEnvironment(const EDTEnvironment::Ptr& env);
 
             void visFrontEnd();
             void visExpanded();
@@ -183,7 +186,15 @@ namespace uneven_planner
             path_node_pool.push_back(new PathNode());
         }
     }
-
+    inline void KinoAstar::setEnvironment(const EDTEnvironment::Ptr& env)
+    {
+        this->edt_environment_ = env;
+        allocate_num = edt_environment_->getPixelNum();
+        for (int i = 0; i < allocate_num; i++)
+        {
+            path_node_pool.push_back(new PathNode());
+        }
+    }
     inline int KinoAstar::yawToIndex(const double &yaw)
     {
         double nor_yaw = normalizeAngle(yaw);

@@ -167,9 +167,13 @@ public:
   void updateESDF2d();
 
   void publishMap();
+
   void publishMapInflate(bool all_info = false);
 
   void getRegion(Eigen::Vector2d& ori, Eigen::Vector2d& size);
+
+  int getPixelNum(){ return mp_.map_voxel_num_(0) * mp_.map_voxel_num_(1); }
+
   double getResolution();
 
 

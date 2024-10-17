@@ -9,7 +9,8 @@
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Path.h>
 
-#include "uneven_map/uneven_map.h"
+#include "plan_env/uneven_map.h"
+#include "plan_env/edt_environment.h"
 #include "kino_astar.h"
 #include "back_end/minco_traj_opt/alm_traj_opt.h"
 #include "back_end/minco_traj_opt/alm_traj_opt_flow.h"
@@ -26,10 +27,14 @@ namespace uneven_planner
             double init_time_times;
             double yaw_piece_times;
             double init_sig_vel;
+            bool is_uneven;
+            bool has_global_map;
             Eigen::Vector3d odom_pos;
             string bk_dir;
 
             UnevenMap::Ptr uneven_map;
+            EDTEnvironment::Ptr edt_environment;
+            SDFMap::Ptr sdf_map;
             KinoAstar::Ptr kino_astar;
             std::shared_ptr<AlmTrajOptFlow> traj_opt_flow;
             SE2Trajectory opted_traj;

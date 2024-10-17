@@ -60,6 +60,8 @@ manager_node:
     init_time_times: 1.2
     yaw_piece_times: 2.0
     init_sig_vel: 0.05
+    is_uneven: false
+    has_global_map: true
 
 mpc:
   du_threshold: 0.001

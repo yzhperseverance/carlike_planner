@@ -9,7 +9,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
-  uneven_map
+  plan_env
   visualization_msgs
 )
 
@@ -20,7 +20,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES front_end
- CATKIN_DEPENDS roscpp std_msgs uneven_map visualization_msgs
+ CATKIN_DEPENDS roscpp std_msgs visualization_msgs
 )
 
 include_directories( 
@@ -40,10 +40,3 @@ target_link_libraries( front_end
     ${OMPL_LIBRARIES}
 )
 
-add_executable(front_end_node app/front_end_node.cpp)
-
-target_link_libraries( front_end_node
-    front_end
-    ${catkin_LIBRARIES} 
-    ${OMPL_LIBRARIES}
-)

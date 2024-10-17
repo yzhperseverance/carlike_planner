@@ -9,17 +9,31 @@ namespace uneven_planner
         nh.getParam("manager/init_time_times", init_time_times);
         nh.getParam("manager/yaw_piece_times", yaw_piece_times);
         nh.getParam("manager/init_sig_vel", init_sig_vel);
+        nh.getParam("manager/is_uneven", is_uneven);
+        nh.getParam("manager/has_global_map", has_global_map);
         nh.param<string>("manager/bk_dir", bk_dir, "xxx");
 
         uneven_map.reset(new UnevenMap);
+        sdf_map.reset(new SDFMap);
         kino_astar.reset(new KinoAstar);
         traj_opt_flow.reset(new AlmTrajOptFlow(nh));
+        edt_environment.reset(new EDTEnvironment);
 
-        uneven_map->init(nh);
-        kino_astar->init(nh);
-        kino_astar->setEnvironment(uneven_map);
+        if(is_uneven){
+            uneven_map->init(nh);
+            kino_astar->init(nh);
+            kino_astar->setEnvironment(uneven_map);
+            traj_opt_flow->SetEnvironment(uneven_map);
+        }
+        else{
+            sdf_map->initMap(nh);
+            edt_environment->setMap(sdf_map);
+            kino_astar->init(nh);
+            kino_astar->setEnvironment(edt_environment);
+            traj_opt_flow->SetEnvironment(edt_environment);
+        }
 
-        traj_opt_flow->SetEnvironment(uneven_map);
+
 
         traj_pub = nh.advertise<mpc_controller::SE2Traj>("traj", 1);
         odom_sub = nh.subscribe<nav_msgs::Odometry>("odom", 1, &PlanManager::rcvOdomCallBack, this);

@@ -68,6 +68,8 @@ public:
     sdf_map_->getRegion(ori, size);
   }
 
+  int getPixelNum(){ return sdf_map_->getPixelNum(); }
+
   typedef shared_ptr<EDTEnvironment> Ptr;
 };
 

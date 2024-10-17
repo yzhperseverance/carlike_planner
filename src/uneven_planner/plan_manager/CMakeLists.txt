@@ -6,17 +6,17 @@ ADD_COMPILE_OPTIONS(-std=c++11 )
 ADD_COMPILE_OPTIONS(-std=c++14 )
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
-set(MPC_MESSAGE_DIR "/home/yzh/导航框架/carlike_planner/devel/include/mpc_controller")
 
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   visualization_msgs
-  uneven_map
   front_end
   back_end
   mpc_controller
+  plan_env
+  tf
 )
 message(STATUS "mpc_controller package include directory: ${mpc_controller_INCLUDE_DIRS}")
 
@@ -27,7 +27,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES plan_manager
- CATKIN_DEPENDS roscpp std_msgs uneven_map visualization_msgs front_end back_end mpc_controller
+ CATKIN_DEPENDS roscpp std_msgs visualization_msgs front_end back_end mpc_controller tf plan_env
 )
 
 include_directories( 

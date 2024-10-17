@@ -12,10 +12,11 @@
   <build_depend>roscpp</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>visualization_msgs</build_depend>
-  <build_depend>uneven_map</build_depend>
   <build_depend>front_end</build_depend>
   <build_depend>back_end</build_depend>
   <build_depend>mpc_controller</build_depend>
+  <build_depend>plan_env</build_depend>
+  <build_depend>tf</build_depend>
 
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>std_msgs</build_export_depend>
@@ -25,9 +26,10 @@
   <exec_depend>roscpp</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
-  <exec_depend>uneven_map</exec_depend>
   <exec_depend>front_end</exec_depend>
   <exec_depend>back_end</exec_depend>
   <exec_depend>mpc_controller</exec_depend>
+  <exec_depend>plan_env</exec_depend>
+  <exec_depend>tf</exec_depend>
 
 </package>
