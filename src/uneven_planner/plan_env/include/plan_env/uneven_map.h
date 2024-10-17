@@ -27,7 +27,6 @@
 #include <pcl/filters/crop_box.h>
 #include <pcl/kdtree/kdtree_flann.h>
 
-#include "map_base.h"
 using namespace std;
 
 namespace uneven_planner
@@ -62,7 +61,7 @@ namespace uneven_planner
         }
     };
 
-    class UnevenMap : public MapBase
+    class UnevenMap
     {
         private:
             // params

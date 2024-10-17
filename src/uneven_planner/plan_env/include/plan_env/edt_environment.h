@@ -26,8 +26,8 @@
 #ifndef _EDT_ENVIRONMENT_H_
 #define _EDT_ENVIRONMENT_H_
 
-#include "map_base.h"
 #include <plan_env/sdf_map.h>
 #include <plan_env/uneven_map.h>
+#include <plan_env/global_map.h>
 
 #endif

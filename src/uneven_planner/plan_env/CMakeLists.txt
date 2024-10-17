@@ -39,9 +39,9 @@ set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS} -O3 -Wall")
 
 add_library( plan_env 
     src/sdf_map.cpp
-    src/edt_environment.cpp
-    src/uneven_map.cpp
-        include/plan_env/map_base.h
+        src/uneven_map.cpp
+        include/plan_env/global_map.h
+        src/global_map.cpp
 )
 target_link_libraries( plan_env
     ${catkin_LIBRARIES} 

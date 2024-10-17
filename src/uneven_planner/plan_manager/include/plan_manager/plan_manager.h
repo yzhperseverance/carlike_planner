@@ -8,10 +8,9 @@
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Path.h>
+#include <nav_msgs/OccupancyGrid.h>
 
-#include "plan_env/uneven_map.h"
 #include "plan_env/edt_environment.h"
-#include "plan_env/map_base.h"
 #include "kino_astar.h"
 #include "back_end/minco_traj_opt/alm_traj_opt.h"
 #include "back_end/minco_traj_opt/alm_traj_opt_flow.h"
@@ -35,6 +34,7 @@ namespace uneven_planner
 
             UnevenMap::Ptr uneven_map;
             SDFMap::Ptr sdf_map;
+            GlobalMap::Ptr global_map;
             KinoAstar::Ptr kino_astar;
             std::shared_ptr<AlmTrajOptFlow> traj_opt_flow;
             SE2Trajectory opted_traj;
@@ -42,10 +42,12 @@ namespace uneven_planner
             ros::Publisher traj_pub;
             ros::Subscriber odom_sub;
             ros::Subscriber target_sub;
+            ros::Subscriber global_map_sub;
             
         public:
             void init(ros::NodeHandle& nh);
             void rcvOdomCallBack(const nav_msgs::OdometryConstPtr& msg);
             void rcvWpsCallBack(const geometry_msgs::PoseStamped msg);
+            void rcvGlobalMapCallBack(const nav_msgs::OccupancyGridPtr& msg);
     };
 }
