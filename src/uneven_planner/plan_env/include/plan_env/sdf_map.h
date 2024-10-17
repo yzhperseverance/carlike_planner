@@ -50,7 +50,6 @@
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/time_synchronizer.h>
 
-#include "map_base.h"
 #define logit(x) (log((x) / (1 - (x))))
 using namespace std;
 
@@ -136,7 +135,7 @@ namespace uneven_planner {
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     };
 
-    class SDFMap : public MapBase {
+    class SDFMap{
     public:
         SDFMap() {}
 
@@ -238,11 +237,11 @@ namespace uneven_planner {
  * ============================== */
 
     inline int SDFMap::toAddress(const Eigen::Vector2i &id) {
-        return id(0) * mp_.map_voxel_num_(1) + id(1);
+        return id(1) * mp_.map_voxel_num_(0) + id(0);
     }
 
     inline int SDFMap::toAddress(int &x, int &y) {
-        return x * mp_.map_voxel_num_(1) + y;
+        return y * mp_.map_voxel_num_(0) + x;
     }
 
     inline void SDFMap::boundIndex(Eigen::Vector2i &id) {

@@ -31,9 +31,8 @@ namespace uneven_planner
             traj_opt_flow->SetEnvironment(sdf_map);
         }
 
-
-
         traj_pub = nh.advertise<mpc_controller::SE2Traj>("traj", 1);
+        global_map_sub = nh.subscribe("/global_costmap/costmap/costmap", 1, &PlanManager::rcvGlobalMapCallBack, this);
         odom_sub = nh.subscribe<nav_msgs::Odometry>("odom", 1, &PlanManager::rcvOdomCallBack, this);
         target_sub = nh.subscribe<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1, &PlanManager::rcvWpsCallBack, this);
 
@@ -50,7 +49,10 @@ namespace uneven_planner
         Eigen::Matrix3d R(q);
         odom_pos(2) = UnevenMap::calYawFromR(R);
     }
+    void PlanManager::rcvGlobalMapCallBack(const nav_msgs::OccupancyGridPtr& msg) {
+        global_map->init(msg);
 
+    }
     void PlanManager::rcvWpsCallBack(const geometry_msgs::PoseStamped msg)
     {
         if (in_plan || !uneven_map->mapReady())
