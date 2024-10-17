@@ -84,7 +84,7 @@ namespace uneven_planner
         }
 
         Eigen::Vector3d end_pt(end_state.head(3));
-        // if (uneven_map->isOccupancy(end_state) == 1)
+
         if (uneven_map->isOccupancy(start_state) == 1)
         {
             ROS_ERROR("start is not free!!!");

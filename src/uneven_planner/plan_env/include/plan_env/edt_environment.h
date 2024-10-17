@@ -26,53 +26,8 @@
 #ifndef _EDT_ENVIRONMENT_H_
 #define _EDT_ENVIRONMENT_H_
 
-#include <Eigen/Eigen>
-#include <geometry_msgs/PoseStamped.h>
-#include <iostream>
-#include <ros/ros.h>
-#include <utility>
-
+#include "map_base.h"
 #include <plan_env/sdf_map.h>
-
-using std::cout;
-using std::endl;
-using std::list;
-using std::pair;
-using std::shared_ptr;
-using std::unique_ptr;
-using std::vector;
-
-namespace uneven_planner {
-class EDTEnvironment {
-private:
-  /* data */
-  double resolution_inv_;
-public:
-  EDTEnvironment(/* args */) {
-  }
-  ~EDTEnvironment() {
-  }
-
-  SDFMap::Ptr sdf_map_;
-
-  void init();
-  void setMap(SDFMap::Ptr map);
-
-  void getSurroundDistance(Eigen::Vector2d pts[2][2], double dists[2][2]);
-  void interpolateBilinear(double values[2][2], const Eigen::Vector2d& diff,
-                                                     double& value, Eigen::Vector2d& grad);
-  void evaluateEDTWithGrad(const Eigen::Vector2d& pos, double time,
-                                                    double& dist, Eigen::Vector2d& grad);
-
-  void getMapRegion(Eigen::Vector2d& ori, Eigen::Vector2d& size) {
-    sdf_map_->getRegion(ori, size);
-  }
-
-  int getPixelNum(){ return sdf_map_->getPixelNum(); }
-
-  typedef shared_ptr<EDTEnvironment> Ptr;
-};
-
-}  // namespace fast_planner
+#include <plan_env/uneven_map.h>
 
 #endif

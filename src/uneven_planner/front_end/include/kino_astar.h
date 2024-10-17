@@ -22,7 +22,6 @@
 #include <ompl/base/spaces/DubinsStateSpace.h>
 #include <ompl/geometric/SimpleSetup.h>
 
-#include "plan_env/uneven_map.h"
 #include "plan_env/edt_environment.h"
 #define inf 1 >> 30
 #define PI_X_2 6.283185307179586
@@ -30,8 +29,7 @@
 #define OPEN 'b'
 #define NOT_EXPAND 'c'
 
-namespace uneven_planner
-{
+
     class PathNode
     {
         public:
@@ -96,13 +94,14 @@ namespace uneven_planner
             void clear() { data_.clear(); }
     };
 
-
+namespace uneven_planner
+{
     class KinoAstar
     {
         private:
             // datas
             UnevenMap::Ptr uneven_map;
-            EDTEnvironment::Ptr edt_environment_;
+            SDFMap::Ptr sdf_map;
             std::vector<PathNodePtr> path_node_pool;
             NodeHashTable<PathNodePtr> expanded_nodes;
             pcl::PointCloud<pcl::PointXYZ> expanded_points;
@@ -152,7 +151,7 @@ namespace uneven_planner
 
             inline void setEnvironment(const UnevenMap::Ptr& env);
 
-            inline void setEnvironment(const EDTEnvironment::Ptr& env);
+            inline void setEnvironment(const SDFMap::Ptr& env);
 
             void visFrontEnd();
             void visExpanded();
@@ -186,10 +185,10 @@ namespace uneven_planner
             path_node_pool.push_back(new PathNode());
         }
     }
-    inline void KinoAstar::setEnvironment(const EDTEnvironment::Ptr& env)
+    inline void KinoAstar::setEnvironment(const SDFMap::Ptr& env)
     {
-        this->edt_environment_ = env;
-        allocate_num = edt_environment_->getPixelNum();
+        this->sdf_map = env;
+        allocate_num = sdf_map->getPixelNum();
         for (int i = 0; i < allocate_num; i++)
         {
             path_node_pool.push_back(new PathNode());

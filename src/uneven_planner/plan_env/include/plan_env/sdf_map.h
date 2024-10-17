@@ -50,225 +50,248 @@
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/time_synchronizer.h>
 
+#include "map_base.h"
 #define logit(x) (log((x) / (1 - (x))))
-
 using namespace std;
 
+namespace uneven_planner {
+
 // voxel hashing
-template <typename T>
-struct matrix_hash : std::unary_function<T, size_t> {
-  std::size_t operator()(T const& matrix) const {
-    size_t seed = 0;
-    for (size_t i = 0; i < matrix.size(); ++i) {
-      auto elem = *(matrix.data() + i);
-      seed ^= std::hash<typename T::Scalar>()(elem) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-    }
-    return seed;
-  }
-};
+    template<typename T>
+    struct matrix_hash : std::unary_function<T, size_t> {
+        std::size_t operator()(T const &matrix) const {
+            size_t seed = 0;
+            for (size_t i = 0; i < matrix.size(); ++i) {
+                auto elem = *(matrix.data() + i);
+                seed ^= std::hash<typename T::Scalar>()(elem) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            }
+            return seed;
+        }
+    };
 
 // constant parameters
 
-struct MappingParameters {
+    struct MappingParameters {
 
-  /* map properties */
-  Eigen::Vector2d map_origin_, map_size_;
-  Eigen::Vector2d map_min_boundary_, map_max_boundary_;  // map range in pos
-  Eigen::Vector2i map_voxel_num_;                        // map range in index
-  Eigen::Vector2i map_min_idx_, map_max_idx_;
-  Eigen::Vector2d local_update_range_;
-  double resolution_, resolution_inv_;
-  double obstacles_inflation_;
-  string frame_id_;
-  int pose_type_;
-  string map_input_;  // 1: pose+depth; 2: odom + cloud
+        /* map properties */
+        Eigen::Vector2d map_origin_, map_size_;
+        Eigen::Vector2d map_min_boundary_, map_max_boundary_;  // map range in pos
+        Eigen::Vector2i map_voxel_num_;                        // map range in index
+        Eigen::Vector2i map_min_idx_, map_max_idx_;
+        Eigen::Vector2d local_update_range_;
+        double resolution_, resolution_inv_;
+        double obstacles_inflation_;
+        string frame_id_;
+        int pose_type_;
+        string map_input_;  // 1: pose+depth; 2: odom + cloud
 
 
-  /* local map update and clear */
-  double local_bound_inflate_;
-  int local_map_margin_;
+        /* local map update and clear */
+        double local_bound_inflate_;
+        int local_map_margin_;
 
-  /* visualization and computation time display */
-  double esdf_slice_height_, visualization_truncate_height_, virtual_ceil_height_, ground_height_;
-  bool show_esdf_time_, show_occ_time_;
+        /* visualization and computation time display */
+        double esdf_slice_height_, visualization_truncate_height_, virtual_ceil_height_, ground_height_;
+        bool show_esdf_time_, show_occ_time_;
 
-  /* active mapping */
-  double unknown_flag_;
-};
+        /* active mapping */
+        double unknown_flag_;
+    };
 
 // intermediate mapping data for fusion, esdf
 
-struct MappingData {
-  // main map data, occupancy of each voxel and Euclidean distance
+    struct MappingData {
+        // main map data, occupancy of each voxel and Euclidean distance
 
-  std::vector<double> occupancy_buffer_;
-  std::vector<char> occupancy_buffer_neg;
-  std::vector<char> occupancy_buffer_inflate_;
-  std::vector<double> distance_buffer_;
-  std::vector<double> distance_buffer_neg_;
-  std::vector<double> distance_buffer_all_;
-  std::vector<double> tmp_buffer1_;
-  std::vector<double> tmp_buffer2_;
+        std::vector<double> occupancy_buffer_;
+        std::vector<char> occupancy_buffer_neg;
+        std::vector<char> occupancy_buffer_inflate_;
+        std::vector<double> distance_buffer_;
+        std::vector<double> distance_buffer_neg_;
+        std::vector<double> distance_buffer_all_;
+        std::vector<double> tmp_buffer1_;
+        std::vector<double> tmp_buffer2_;
 
-  // lidar position and pose data
-  Eigen::Vector2d lidar_pos_, last_lidar_pos_;
-  Eigen::Quaterniond lidar_q_, last_lidar_q_;
-
-
-  // flags of map state
-
-  bool occ_need_update_, local_updated_, esdf_need_update_;
-  bool has_first_depth_;
-  bool has_odom_, has_cloud_;
+        // lidar position and pose data
+        Eigen::Vector2d lidar_pos_, last_lidar_pos_;
+        Eigen::Quaterniond lidar_q_, last_lidar_q_;
 
 
-  // range of updating ESDF
+        // flags of map state
 
-  Eigen::Vector2i local_bound_min_, local_bound_max_;
-
-  // computation time
-
-  double fuse_time_, esdf_time_, max_fuse_time_, max_esdf_time_;
-  int update_num_;
-
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-};
-
-class SDFMap {
-public:
-  SDFMap() {}
-  ~SDFMap() {}
-
-  enum { POSE_STAMPED = 1, ODOMETRY = 2, INVALID_IDX = -10000 };
-
-  // occupancy map management
-  void resetBuffer();
-  void resetBuffer(Eigen::Vector2d min, Eigen::Vector2d max);
-
-  void initMap(ros::NodeHandle& nh);
-
-  inline void posToIndex(const Eigen::Vector2d& pos, Eigen::Vector2i& id);
-  inline void indexToPos(const Eigen::Vector2i& id, Eigen::Vector2d& pos);
-  inline int toAddress(const Eigen::Vector2i& id);
-  inline int toAddress(int& x, int& y);
-  inline bool isInMap(const Eigen::Vector2d& pos);
-  inline bool isInMap(const Eigen::Vector2i& idx);
-
-  inline void boundIndex(Eigen::Vector2i& id);
-
-  // distance field management
-  inline double getDistance(const Eigen::Vector2d& pos);
-  inline double getDistance(const Eigen::Vector2i& id);
-  inline double getDistWithGradBilinear(Eigen::Vector2d pos, Eigen::Vector2d& grad);
-  void getSurroundPts(const Eigen::Vector2d& pos, Eigen::Vector2d pts[2][2], Eigen::Vector2d& diff);
-  // /inline void setLocalRange(Eigen::Vector3d min_pos, Eigen::Vector3d
-  // max_pos);
-
-  void updateESDF2d();
-
-  void publishMap();
-
-  void publishMapInflate(bool all_info = false);
-
-  void getRegion(Eigen::Vector2d& ori, Eigen::Vector2d& size);
-
-  int getPixelNum(){ return mp_.map_voxel_num_(0) * mp_.map_voxel_num_(1); }
-
-  double getResolution();
+        bool occ_need_update_, local_updated_, esdf_need_update_;
+        bool has_first_depth_;
+        bool has_odom_, has_cloud_;
 
 
-  typedef std::shared_ptr<SDFMap> Ptr;
+        // range of updating ESDF
 
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+        Eigen::Vector2i local_bound_min_, local_bound_max_;
 
-private:
-  MappingParameters mp_;
-  MappingData md_;
+        // computation time
 
-  template <typename F_get_val, typename F_set_val>
-  void fillESDF(F_get_val f_get_val, F_set_val f_set_val, int start, int end, int dim);
+        double fuse_time_, esdf_time_, max_fuse_time_, max_esdf_time_;
+        int update_num_;
 
-  // get depth image and camera pose
-  void cloudCallback(const sensor_msgs::LaserScanConstPtr& scan);
-  void odomCallback(const nav_msgs::OdometryConstPtr& odom);
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    };
 
-  // update occupancy by raycasting, and update ESDF
-  void updateESDFCallback(const ros::TimerEvent& /*event*/);
-  void visCallback(const ros::TimerEvent& /*event*/);
+    class SDFMap : public MapBase {
+    public:
+        SDFMap() {}
 
-  Eigen::Vector3d closetPointInMap(const Eigen::Vector3d& pt, const Eigen::Vector3d& camera_pt);
+        ~SDFMap() {}
 
-  ros::NodeHandle node_;
-  shared_ptr<message_filters::Subscriber<geometry_msgs::PoseStamped>> pose_sub_;
-  shared_ptr<message_filters::Subscriber<nav_msgs::Odometry>> odom_sub_;
+        enum {
+            POSE_STAMPED = 1, ODOMETRY = 2, INVALID_IDX = -10000
+        };
 
-  ros::Subscriber indep_depth_sub_, indep_odom_sub_, indep_pose_sub_, indep_cloud_sub_;
-  ros::Publisher map_pub_, esdf_pub_, map_inf_pub_, update_range_pub_;
-  ros::Timer esdf_timer_, vis_timer_;
+        // occupancy map management
+        void resetBuffer();
 
-  //
-  uniform_real_distribution<double> rand_noise_;
-  normal_distribution<double> rand_noise2_;
-  default_random_engine eng_;
-};
+        void resetBuffer(Eigen::Vector2d min, Eigen::Vector2d max);
+
+        void initMap(ros::NodeHandle &nh);
+
+        inline void posToIndex(const Eigen::Vector2d &pos, Eigen::Vector2i &id);
+
+        inline void indexToPos(const Eigen::Vector2i &id, Eigen::Vector2d &pos);
+
+        inline int toAddress(const Eigen::Vector2i &id);
+
+        inline int toAddress(int &x, int &y);
+
+        inline bool isInMap(const Eigen::Vector2d &pos);
+
+        inline bool isInMap(const Eigen::Vector2i &idx);
+
+        inline void boundIndex(Eigen::Vector2i &id);
+
+        // distance field management
+        inline double getDistance(const Eigen::Vector2d &pos);
+
+        inline double getDistance(const Eigen::Vector2i &id);
+
+        inline double getDistWithGradBilinear(Eigen::Vector2d pos, Eigen::Vector2d &grad);
+
+        void getSurroundPts(const Eigen::Vector2d &pos, Eigen::Vector2d pts[2][2], Eigen::Vector2d &diff);
+
+        void getSurroundDistance(Eigen::Vector2d pts[2][2], double dists[2][2]);
+
+        void interpolateBilinear(double values[2][2], const Eigen::Vector2d &diff,
+                                 double &value, Eigen::Vector2d &grad);
+
+        void evaluateEDTWithGrad(const Eigen::Vector2d &pos, double time,
+                                 double &dist, Eigen::Vector2d &grad);
+
+        void updateESDF2d();
+
+        void publishMap();
+
+        void publishMapInflate(bool all_info = false);
+
+        void getRegion(Eigen::Vector2d &ori, Eigen::Vector2d &size);
+
+        int getPixelNum() { return mp_.map_voxel_num_(0) * mp_.map_voxel_num_(1); }
+
+        double getResolution();
+
+
+        typedef std::shared_ptr<SDFMap> Ptr;
+
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    private:
+        MappingParameters mp_;
+        MappingData md_;
+
+        template<typename F_get_val, typename F_set_val>
+        void fillESDF(F_get_val f_get_val, F_set_val f_set_val, int start, int end, int dim);
+
+        // get depth image and camera pose
+        void cloudCallback(const sensor_msgs::LaserScanConstPtr &scan);
+
+        void odomCallback(const nav_msgs::OdometryConstPtr &odom);
+
+        // update occupancy by raycasting, and update ESDF
+        void updateESDFCallback(const ros::TimerEvent & /*event*/);
+
+        void visCallback(const ros::TimerEvent & /*event*/);
+
+        Eigen::Vector3d closetPointInMap(const Eigen::Vector3d &pt, const Eigen::Vector3d &camera_pt);
+
+        ros::NodeHandle node_;
+        shared_ptr<message_filters::Subscriber < geometry_msgs::PoseStamped>> pose_sub_;
+        shared_ptr<message_filters::Subscriber < nav_msgs::Odometry>> odom_sub_;
+
+        ros::Subscriber indep_depth_sub_, indep_odom_sub_, indep_pose_sub_, indep_cloud_sub_;
+        ros::Publisher map_pub_, esdf_pub_, map_inf_pub_, update_range_pub_;
+        ros::Timer esdf_timer_, vis_timer_;
+
+        //
+        uniform_real_distribution<double> rand_noise_;
+        normal_distribution<double> rand_noise2_;
+        default_random_engine eng_;
+    };
 
 /* ============================== definition of inline function
  * ============================== */
 
-inline int SDFMap::toAddress(const Eigen::Vector2i& id) {
-  return id(0) * mp_.map_voxel_num_(1) + id(1);
-}
+    inline int SDFMap::toAddress(const Eigen::Vector2i &id) {
+        return id(0) * mp_.map_voxel_num_(1) + id(1);
+    }
 
-inline int SDFMap::toAddress(int& x, int& y) {
-  return x * mp_.map_voxel_num_(1) + y;
-}
+    inline int SDFMap::toAddress(int &x, int &y) {
+        return x * mp_.map_voxel_num_(1) + y;
+    }
 
-inline void SDFMap::boundIndex(Eigen::Vector2i& id) {
-  Eigen::Vector2i id1;
-  id1(0) = max(min(id(0), mp_.map_voxel_num_(0) - 1), 0);
-  id1(1) = max(min(id(1), mp_.map_voxel_num_(1) - 1), 0);
-  id = id1;
-}
+    inline void SDFMap::boundIndex(Eigen::Vector2i &id) {
+        Eigen::Vector2i id1;
+        id1(0) = max(min(id(0), mp_.map_voxel_num_(0) - 1), 0);
+        id1(1) = max(min(id(1), mp_.map_voxel_num_(1) - 1), 0);
+        id = id1;
+    }
 
-inline double SDFMap::getDistance(const Eigen::Vector2d& pos) {
-  Eigen::Vector2i id;
-  posToIndex(pos, id);
-  boundIndex(id);
+    inline double SDFMap::getDistance(const Eigen::Vector2d &pos) {
+        Eigen::Vector2i id;
+        posToIndex(pos, id);
+        boundIndex(id);
 
-  return md_.distance_buffer_all_[toAddress(id)];
-}
+        return md_.distance_buffer_all_[toAddress(id)];
+    }
 
-inline double SDFMap::getDistance(const Eigen::Vector2i& id) {
-  Eigen::Vector2i id1 = id;
-  boundIndex(id1);
-  return md_.distance_buffer_all_[toAddress(id1)];
-}
+    inline double SDFMap::getDistance(const Eigen::Vector2i &id) {
+        Eigen::Vector2i id1 = id;
+        boundIndex(id1);
+        return md_.distance_buffer_all_[toAddress(id1)];
+    }
 
-inline bool SDFMap::isInMap(const Eigen::Vector2d& pos) {
-  if (pos(0) < mp_.map_min_boundary_(0) + 1e-4 || pos(1) < mp_.map_min_boundary_(1) + 1e-4) {
-    return false;
-  }
-  if (pos(0) > mp_.map_max_boundary_(0) - 1e-4 || pos(1) > mp_.map_max_boundary_(1) - 1e-4) {
-    return false;
-  }
-  return true;
-}
+    inline bool SDFMap::isInMap(const Eigen::Vector2d &pos) {
+        if (pos(0) < mp_.map_min_boundary_(0) + 1e-4 || pos(1) < mp_.map_min_boundary_(1) + 1e-4) {
+            return false;
+        }
+        if (pos(0) > mp_.map_max_boundary_(0) - 1e-4 || pos(1) > mp_.map_max_boundary_(1) - 1e-4) {
+            return false;
+        }
+        return true;
+    }
 
-inline bool SDFMap::isInMap(const Eigen::Vector2i& idx) {
-  if (idx(0) < 0 || idx(1) < 0) {
-    return false;
-  }
-  if (idx(0) > mp_.map_voxel_num_(0) - 1 || idx(1) > mp_.map_voxel_num_(1) - 1) {
-    return false;
-  }
-  return true;
-}
+    inline bool SDFMap::isInMap(const Eigen::Vector2i &idx) {
+        if (idx(0) < 0 || idx(1) < 0) {
+            return false;
+        }
+        if (idx(0) > mp_.map_voxel_num_(0) - 1 || idx(1) > mp_.map_voxel_num_(1) - 1) {
+            return false;
+        }
+        return true;
+    }
 
-inline void SDFMap::posToIndex(const Eigen::Vector2d& pos, Eigen::Vector2i& id) {
-  for (int i = 0; i < 2; ++i) id(i) = floor((pos(i) - mp_.map_origin_(i)) * mp_.resolution_inv_);
-}
+    inline void SDFMap::posToIndex(const Eigen::Vector2d &pos, Eigen::Vector2i &id) {
+        for (int i = 0; i < 2; ++i) id(i) = floor((pos(i) - mp_.map_origin_(i)) * mp_.resolution_inv_);
+    }
 
-inline void SDFMap::indexToPos(const Eigen::Vector2i& id, Eigen::Vector2d& pos) {
-  for (int i = 0; i < 2; ++i) pos(i) = (id(i) + 0.5) * mp_.resolution_ + mp_.map_origin_(i);
+    inline void SDFMap::indexToPos(const Eigen::Vector2i &id, Eigen::Vector2d &pos) {
+        for (int i = 0; i < 2; ++i) pos(i) = (id(i) + 0.5) * mp_.resolution_ + mp_.map_origin_(i);
+    }
 }
 #endif

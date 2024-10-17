@@ -14,10 +14,9 @@ namespace uneven_planner
         nh.param<string>("manager/bk_dir", bk_dir, "xxx");
 
         uneven_map.reset(new UnevenMap);
-        sdf_map.reset(new SDFMap);
+        sdf_map.reset(new SDFMap); // local_sdf_map
         kino_astar.reset(new KinoAstar);
         traj_opt_flow.reset(new AlmTrajOptFlow(nh));
-        edt_environment.reset(new EDTEnvironment);
 
         if(is_uneven){
             uneven_map->init(nh);
@@ -27,10 +26,9 @@ namespace uneven_planner
         }
         else{
             sdf_map->initMap(nh);
-            edt_environment->setMap(sdf_map);
             kino_astar->init(nh);
-            kino_astar->setEnvironment(edt_environment);
-            traj_opt_flow->SetEnvironment(edt_environment);
+            kino_astar->setEnvironment(sdf_map);
+            traj_opt_flow->SetEnvironment(sdf_map);
         }
 
 

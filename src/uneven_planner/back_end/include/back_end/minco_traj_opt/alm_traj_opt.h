@@ -6,7 +6,6 @@
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Path.h>
 
-#include "plan_env/uneven_map.h"
 #include "utils/se2traj.hpp"
 #include "utils/lbfgs.hpp"
 #include "plan_env/edt_environment.h"
@@ -79,7 +78,7 @@ namespace uneven_planner
             Eigen::MatrixXd end_yaw;
             MINCO_SE2       minco_se2;
             UnevenMap::Ptr  uneven_map;
-            EDTEnvironment::Ptr edt_environment_;
+            SDFMap::Ptr sdf_map;
 
             // ros
             ros::Publisher debug_pub;
@@ -107,8 +106,10 @@ namespace uneven_planner
 
             void pubDebugTraj(const SE2Trajectory& traj);
 
+            // environment
             inline void setEnvironment(const UnevenMap::Ptr& env);
-            inline void setEnvironment(const EDTEnvironment::Ptr& env);
+            inline void setEnvironment(const SDFMap::Ptr& env);
+
             inline void updateDualVars();
             inline bool judgeConvergence();
             inline double getAugmentedCost(double h_or_g, double lambda_or_mu);
@@ -128,9 +129,9 @@ namespace uneven_planner
         this->uneven_map = env;
     }
 
-    inline void ALMTrajOpt::setEnvironment(const EDTEnvironment::Ptr& env)
+    inline void ALMTrajOpt::setEnvironment(const SDFMap::Ptr& env)
     {
-        this->edt_environment_ = env;
+        this->sdf_map = env;
     }
 
     inline void ALMTrajOpt::updateDualVars()

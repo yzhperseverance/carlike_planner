@@ -8,6 +8,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include "back_end/minco_traj_opt/alm_traj_opt.h"
 #include "utils/se2traj.hpp"
+#include <plan_env/edt_environment.h>
 namespace uneven_planner {
 
     class AlmTrajOptFlow {
@@ -18,7 +19,7 @@ namespace uneven_planner {
 
         void Run(const std::vector<Eigen::Vector3d> &init_path);
 
-        inline void SetEnvironment(const EDTEnvironment::Ptr& env) { alm_traj_ptr_->setEnvironment(env); }
+        inline void SetEnvironment(const SDFMap::Ptr& env) { alm_traj_ptr_->setEnvironment(env); }
 
         inline void SetEnvironment(const UnevenMap::Ptr& env) { alm_traj_ptr_->setEnvironment(env); }
 

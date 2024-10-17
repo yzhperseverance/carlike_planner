@@ -41,6 +41,7 @@ add_library( plan_env
     src/sdf_map.cpp
     src/edt_environment.cpp
     src/uneven_map.cpp
+        include/plan_env/map_base.h
 )
 target_link_libraries( plan_env
     ${catkin_LIBRARIES} 
