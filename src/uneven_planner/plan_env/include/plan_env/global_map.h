@@ -24,11 +24,10 @@ namespace uneven_planner {
 
         bool isInMap(const Eigen::Vector2d &pos);
 
-        bool isInMap(const Eigen::Vector2i &idx);
-
         bool isOccupancy(const Eigen::Vector2d& pos);
 
-        bool isOccupancy(const Eigen::Vector2i& id);
+
+        inline int getXYNum() { return width * height; }
 
         nav_msgs::OccupancyGridPtr global_map;
 

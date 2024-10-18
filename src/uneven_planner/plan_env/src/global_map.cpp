@@ -44,31 +44,16 @@ namespace uneven_planner{
         return true;
     }
 
-    bool GlobalMap::isInMap(const Eigen::Vector2i &idx) {
-        if (idx(0) < 0 || idx(1) < 0) {
-            return false;
-        }
-        if (idx(0) > width - 1 || idx(1) > height - 1) {
-            return false;
-        }
-        return true;
-    }
 
     bool GlobalMap::isOccupancy(const Eigen::Vector2d& pos)
     {
-        Eigen::Vector2i id;
-
-        posToIndex(pos, id);
-
-        return isOccupancy(id);
-    }
-
-    bool GlobalMap::isOccupancy(const Eigen::Vector2i& id)
-    {
-        if (!isInMap(id)){
+        if (!isInMap(pos)){
             std::cout << "Error occur in GlobalMap::isOccupancy.Pos out of range!" << std::endl;
             return false;
         }
+        Eigen::Vector2i id;
+
+        posToIndex(pos, id);
 
         // 膨胀的时候有些值不是100，向上取整数
         if(global_map->data[toAddress(id)]){
@@ -77,6 +62,8 @@ namespace uneven_planner{
         else{
             return false;
         }
+
     }
+
 
 }

@@ -102,6 +102,7 @@ namespace uneven_planner
             // datas
             UnevenMap::Ptr uneven_map;
             SDFMap::Ptr sdf_map;
+            GlobalMap::Ptr global_map;
             std::vector<PathNodePtr> path_node_pool;
             NodeHashTable<PathNodePtr> expanded_nodes;
             pcl::PointCloud<pcl::PointXYZ> expanded_points;
@@ -153,15 +154,19 @@ namespace uneven_planner
 
             inline void setEnvironment(const SDFMap::Ptr& env);
 
+            inline void setEnvironment(const GlobalMap::Ptr& env);
+
             void visFrontEnd();
             void visExpanded();
 
 
             std::vector<Eigen::Vector3d> Plan(const Eigen::Vector3d& start_state, const Eigen::Vector3d& end_state);
 
+            // uneven_map的index
+            inline void stateToIndex(const Eigen::Vector3d& state, Eigen::Vector3i& idx);
+            // global_map的index
+            inline void stateToIndex(const Eigen::Vector3d& state, Eigen::Vector3i& idx, int sig);
 
-
-            inline void stateToIndex(const Eigen::Vector3d& state, Eigen::Vector3i& idx); 
             inline int yawToIndex(const double &yaw);
             inline double normalizeAngle(const double &angle);
             inline double dAngle(const double &angle1, const double &angle2);
@@ -188,7 +193,16 @@ namespace uneven_planner
     inline void KinoAstar::setEnvironment(const SDFMap::Ptr& env)
     {
         this->sdf_map = env;
-        allocate_num = sdf_map->getPixelNum();
+        allocate_num = sdf_map->getXYNum();
+        for (int i = 0; i < allocate_num; i++)
+        {
+            path_node_pool.push_back(new PathNode());
+        }
+    }
+    inline void KinoAstar::setEnvironment(const GlobalMap::Ptr& env)
+    {
+        this->global_map = env;
+        allocate_num = global_map->getXYNum();
         for (int i = 0; i < allocate_num; i++)
         {
             path_node_pool.push_back(new PathNode());
@@ -204,6 +218,14 @@ namespace uneven_planner
     inline void KinoAstar::stateToIndex(const Eigen::Vector3d& state, Eigen::Vector3i& idx)
     {
         uneven_map->posToIndex(state, idx);
+        idx(2) = floor((normalizeAngle(state(2)) + M_PI) * yaw_resolution_inv);
+    }
+    inline void KinoAstar::stateToIndex(const Eigen::Vector3d& state, Eigen::Vector3i& idx, int sig)
+    {
+        Eigen::Vector2i tmp_idx = idx.head(2);
+        global_map->posToIndex(state.head(2), tmp_idx);
+        idx(0) = tmp_idx(0);
+        idx(1) = tmp_idx(1);
         idx(2) = floor((normalizeAngle(state(2)) + M_PI) * yaw_resolution_inv);
     }
 

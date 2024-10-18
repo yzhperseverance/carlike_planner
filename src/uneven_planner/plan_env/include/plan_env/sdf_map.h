@@ -191,7 +191,7 @@ namespace uneven_planner {
 
         void getRegion(Eigen::Vector2d &ori, Eigen::Vector2d &size);
 
-        int getPixelNum() { return mp_.map_voxel_num_(0) * mp_.map_voxel_num_(1); }
+        inline int getXYNum() { return mp_.map_voxel_num_(0) * mp_.map_voxel_num_(1); }
 
         double getResolution();
 
