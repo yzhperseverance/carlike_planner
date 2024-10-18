@@ -17,6 +17,7 @@ namespace uneven_planner
         sdf_map.reset(new SDFMap); // local_sdf_map
         kino_astar.reset(new KinoAstar);
         traj_opt_flow.reset(new AlmTrajOptFlow(nh));
+        global_map.reset(new GlobalMap());
 
         if(is_uneven){
             uneven_map->init(nh);
@@ -27,11 +28,11 @@ namespace uneven_planner
         else{
             sdf_map->initMap(nh);
             kino_astar->init(nh);
-            kino_astar->setEnvironment(sdf_map);
-            traj_opt_flow->SetEnvironment(sdf_map);
+            //traj_opt_flow->SetEnvironment(sdf_map);
         }
 
         traj_pub = nh.advertise<mpc_controller::SE2Traj>("traj", 1);
+        path_pub_ = nh.advertise<nav_msgs::Path>("global_path", 1);
         global_map_sub = nh.subscribe("/global_costmap/costmap/costmap", 1, &PlanManager::rcvGlobalMapCallBack, this);
         odom_sub = nh.subscribe<nav_msgs::Odometry>("odom", 1, &PlanManager::rcvOdomCallBack, this);
         target_sub = nh.subscribe<geometry_msgs::PoseStamped>("/move_base_simple/goal", 1, &PlanManager::rcvWpsCallBack, this);
@@ -51,13 +52,16 @@ namespace uneven_planner
     }
     void PlanManager::rcvGlobalMapCallBack(const nav_msgs::OccupancyGridPtr& msg) {
         global_map->init(msg);
-
+        kino_astar->setEnvironment(global_map);
+        std::cout << "receive global map" << std::endl;
     }
     void PlanManager::rcvWpsCallBack(const geometry_msgs::PoseStamped msg)
     {
-        if (in_plan || !uneven_map->mapReady())
+//        if (in_plan || !uneven_map->mapReady())
+//            return;
+        if(in_plan){
             return;
-
+        }
         in_plan = true;
         Eigen::Vector3d end_state(msg.pose.position.x, \
                                   msg.pose.position.y, \
@@ -70,6 +74,9 @@ namespace uneven_planner
             in_plan = false;
             return;
         }
+        PublishPath(init_path);
+        std::cout << "plan success! path_size=" << init_path.size() << std::endl;
+        /*
         // minco optimize
         traj_opt_flow->Run(init_path);
         // visualization
@@ -111,7 +118,27 @@ namespace uneven_planner
         anglept.x = angle[0];
         traj_msg.angle_pts.push_back(anglept);
         traj_pub.publish(traj_msg);
+        */
         in_plan = false;
 
+    }
+
+    void PlanManager::PublishPath(const std::vector<Eigen::Vector3d> &path) {
+        nav_msgs::Path nav_path;
+        geometry_msgs::PoseStamped pose_stamped;
+        for (const auto &pose: path) {
+            pose_stamped.header.frame_id = "map";
+            pose_stamped.pose.position.x = pose.x();
+            pose_stamped.pose.position.y = pose.y();
+            pose_stamped.pose.position.z = 0.0;
+            pose_stamped.pose.orientation = tf::createQuaternionMsgFromYaw(pose.z());
+
+            nav_path.poses.emplace_back(pose_stamped);
+        }
+
+        nav_path.header.frame_id = "map";
+        nav_path.header.stamp = ros::Time::now();
+
+        path_pub_.publish(nav_path);
     }
 }

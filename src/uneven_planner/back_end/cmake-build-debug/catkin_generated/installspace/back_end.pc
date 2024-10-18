@@ -1,8 +1,0 @@
-prefix=/usr/local
-
-Name: back_end
-Description: Description of back_end
-Version: 0.0.1
-Cflags: -I${prefix}/include
-Libs: -L${prefix}/lib -lback_end
-Requires: roscpp std_msgs uneven_map visualization_msgs front_end

@@ -27,7 +27,7 @@
     <arg name="verbose" value="$(arg verbose)"/>
     <arg name="use_sim_time" value="$(arg use_sim_time)"/>
     <arg name="headless" value="$(arg headless)"/>
-    <arg name="world_name" value="$(find carsim)/worlds/map_$(arg map_name).world"/> 
+    <arg name="world_name" value="$(find carsim)/worlds/robocup_home.world"/>
   </include>
 
 	<!-- description -->
@@ -68,8 +68,8 @@
   <node name="cmdvel2gazebo" pkg="carsim" type="cmdvel2gazebo.py" respawn="true" output="screen"/>
 
   <!-- locate car in xy -->
-  <node name="searchForSetPoint" pkg="carsim" type="searchForSetPoint" output="screen">
-    <param name="map_file" type="string" value="$(find uneven_map)/maps/$(arg map_name).pcd" />
-  </node>
+<!--  <node name="searchForSetPoint" pkg="carsim" type="searchForSetPoint" output="screen">-->
+<!--    <param name="map_file" type="string" value="$(find uneven_map)/maps/$(arg map_name).pcd" />-->
+<!--  </node>-->
 
 </launch>

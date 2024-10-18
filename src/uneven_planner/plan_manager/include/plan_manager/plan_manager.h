@@ -39,6 +39,7 @@ namespace uneven_planner
             std::shared_ptr<AlmTrajOptFlow> traj_opt_flow;
             SE2Trajectory opted_traj;
 
+            ros::Publisher path_pub_;
             ros::Publisher traj_pub;
             ros::Subscriber odom_sub;
             ros::Subscriber target_sub;
@@ -49,5 +50,6 @@ namespace uneven_planner
             void rcvOdomCallBack(const nav_msgs::OdometryConstPtr& msg);
             void rcvWpsCallBack(const geometry_msgs::PoseStamped msg);
             void rcvGlobalMapCallBack(const nav_msgs::OccupancyGridPtr& msg);
+            void PublishPath(const std::vector<Eigen::Vector3d> &path);
     };
 }

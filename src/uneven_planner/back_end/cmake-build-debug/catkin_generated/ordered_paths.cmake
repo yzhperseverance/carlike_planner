@@ -1,1 +1,0 @@
-set(ORDERED_PATHS "/home/yzh/导航框架/uneven_planner/devel/lib;/opt/ros/noetic/lib")

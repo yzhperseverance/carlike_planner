@@ -30,6 +30,7 @@ namespace uneven_planner {
         inline int getXYNum() { return width * height; }
 
         nav_msgs::OccupancyGridPtr global_map;
+        bool is_init;
 
         double resolution, resolution_inv;
         unsigned int width, height;

@@ -4,16 +4,16 @@
   <arg name="cmd_topic" value="/racebot/cmd_vel" />
   <arg name="traj_topic" value="/ugv/trajectory" />
   <arg name="map_name" default="desert" />
-  <arg name="x_pos" value="-4.0"/>
-  <arg name="y_pos" value="-4.0"/>
-  <arg name="z_pos" value="3.0"/>
+  <arg name="x_pos" value="0.0"/>
+  <arg name="y_pos" value="0.0"/>
+  <arg name="z_pos" value="0.0"/>
   <arg name="Y_pos" value="0.0"/>
 
   <rosparam command="load" file="$(find plan_manager)/params/run_desert.yaml" />
 
   <node pkg="plan_manager" name="manager_node" type="manager_node" output="screen">
-    <param name="uneven_map/map_pcd" type="string" value="$(find uneven_map)/maps/$(arg map_name).pcd" />
-    <param name="uneven_map/map_file" type="string" value="$(find uneven_map)/maps/$(arg map_name).map" />
+<!--    <param name="uneven_map/map_pcd" type="string" value="$(find uneven_map)/maps/$(arg map_name).pcd" />-->
+<!--    <param name="uneven_map/map_file" type="string" value="$(find uneven_map)/maps/$(arg map_name).map" />-->
     <remap from ="~cmd" to="$(arg cmd_topic)"/>
     <remap from="~odom" to="$(arg odom_topic)"/>
     <remap from="~traj" to="$(arg traj_topic)"/>
@@ -38,5 +38,14 @@
 
   <!-- rviz -->
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find plan_manager)/rviz/default.rviz" required="true" />
-  
+
+  <node pkg="map_server" type="map_server" name="map_server" args="$(find carsim)/maps/robocup_home.yaml"/>
+  <node name="global_costmap" pkg="costmap_2d" type="costmap_2d_node" output="screen">
+    <rosparam file="$(find carsim)/params/global_costmap_params.yaml" command="load"/>
+    <rosparam file="$(find carsim)/params/costmap_common_params.yaml" command="load" ns="costmap"/>
+  </node>
+
+    <node pkg="tf" type="static_transform_publisher"
+        name="world_to_map"
+        args="0 0 0 0 0 0 1  /world /map 100" />
 </launch>

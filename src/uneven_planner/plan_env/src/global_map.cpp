@@ -14,6 +14,7 @@ namespace uneven_planner{
         min_boundary(1) = map->info.origin.position.y;
         max_boundary(0) = map->info.origin.position.x + width * resolution;
         max_boundary(1) = map->info.origin.position.y + height * resolution;
+        is_init = true;
     }
 
     void GlobalMap::posToIndex(const Eigen::Vector2d &pos, Eigen::Vector2i &id) {
@@ -35,12 +36,17 @@ namespace uneven_planner{
     }
 
     bool GlobalMap::isInMap(const Eigen::Vector2d &pos) {
+
+        if (std::isnan(pos(0)) || std::isnan(pos(1))) {
+            return false;
+        }
         if (pos(0) < min_boundary(0) + 1e-4 || pos(1) < min_boundary(1) + 1e-4) {
             return false;
         }
         if (pos(0) > max_boundary(0) - 1e-4 || pos(1) > max_boundary(1) - 1e-4) {
             return false;
         }
+
         return true;
     }
 
@@ -54,6 +60,11 @@ namespace uneven_planner{
         Eigen::Vector2i id;
 
         posToIndex(pos, id);
+//        std::cout << "pos=" << pos << std::endl;
+//        std::cout << "id=" << id << std::endl;
+//        std::cout << "toAddress" << toAddress(id) << std::endl;
+//        std::cout << "width=" << width << std::endl;
+//        std::cout << "height=" << height << std::endl;
 
         // 膨胀的时候有些值不是100，向上取整数
         if(global_map->data[toAddress(id)]){

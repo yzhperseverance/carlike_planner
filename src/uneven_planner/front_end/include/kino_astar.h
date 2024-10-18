@@ -203,10 +203,12 @@ namespace uneven_planner
     {
         this->global_map = env;
         allocate_num = global_map->getXYNum();
+        std::cout << "allocate_num=" << allocate_num << std::endl;
         for (int i = 0; i < allocate_num; i++)
         {
             path_node_pool.push_back(new PathNode());
         }
+        std::cout << "path_node_pool.size=" << path_node_pool.size() << std::endl;
     }
     inline int KinoAstar::yawToIndex(const double &yaw)
     {
@@ -222,7 +224,7 @@ namespace uneven_planner
     }
     inline void KinoAstar::stateToIndex(const Eigen::Vector3d& state, Eigen::Vector3i& idx, int sig)
     {
-        Eigen::Vector2i tmp_idx = idx.head(2);
+        Eigen::Vector2i tmp_idx;
         global_map->posToIndex(state.head(2), tmp_idx);
         idx(0) = tmp_idx(0);
         idx(1) = tmp_idx(1);
@@ -257,11 +259,12 @@ namespace uneven_planner
     inline void KinoAstar::stateTransit(const Eigen::Vector3d &state0, Eigen::Vector3d &state1, \
                                         const Eigen::Vector2d &ctrl_input, const double& T)
     {
+
         double v = ctrl_input[0];
         double delta = ctrl_input[1];
         double s = v * T;
         double y = s * tan(delta) / wheel_base;
-        
+
         if(fabs(delta) > 1e-4)
         {
             double r = s / y;
@@ -276,6 +279,7 @@ namespace uneven_planner
             state1[1] = state0[1] + s * sin(state0[2]);
             state1[2] = state0[2];
         }
+
     }
 
     inline void KinoAstar::asignShotTraj(const Eigen::Vector3d &state1, const Eigen::Vector3d &state2)
@@ -299,7 +303,7 @@ namespace uneven_planner
         for (size_t i=0; i<shot_path.size(); i++)
         {
             // if (uneven_map->isOccupancy(shot_path[i])==1)
-            if (uneven_map->isOccupancyXY(shot_path[i])==1)
+            if (global_map->isOccupancy(shot_path[i].head(2)))
             {
                 shot_path.clear();
                 break;

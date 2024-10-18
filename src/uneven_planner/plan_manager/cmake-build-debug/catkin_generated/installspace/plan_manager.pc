@@ -1,8 +1,0 @@
-prefix=/usr/local
-
-Name: plan_manager
-Description: Description of plan_manager
-Version: 0.0.1
-Cflags: -I${prefix}/include
-Libs: -L${prefix}/lib -lplan_manager
-Requires: roscpp std_msgs uneven_map visualization_msgs front_end back_end mpc_controller

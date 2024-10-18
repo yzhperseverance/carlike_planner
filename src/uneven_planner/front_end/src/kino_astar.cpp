@@ -51,11 +51,16 @@ namespace uneven_planner
         front_end_path.clear();
         expanded_nodes.clear();
         expanded_points.clear();
+
         for (int i = 0; i < use_node_num; i++)
         {
             PathNodePtr node = path_node_pool[i];
             node->parent = NULL;
             node->node_state = NOT_EXPAND;
+        }
+        if(!global_map->is_init){
+            ROS_ERROR("global_map is not init!!!");
+            return front_end_path;
         }
 
         Eigen::Vector3d end_pt(end_state.head(3));
@@ -70,11 +75,14 @@ namespace uneven_planner
             ROS_ERROR("goal is not free!!!");
             return front_end_path;
         }
+
         ros::Time t0 = ros::Time::now();
         PathNodePtr cur_node = path_node_pool[0];
+
         cur_node->parent = NULL;
         cur_node->state = start_state.head(3);
         cur_node->state(2) = normalizeAngle(cur_node->state(2));
+
         stateToIndex(cur_node->state, cur_node->index, 0);
         cur_node->g_score = 0.0;
         cur_node->input = Eigen::Vector2d(0.0, 0.0);
@@ -87,8 +95,10 @@ namespace uneven_planner
 
         while (!open_set.empty())
         {
+
             cur_node = open_set.top();
 
+            //std::cout << "cur_node=" << cur_node << std::endl;
             if((cur_node->state.head(2) - end_pt.head(2)).norm() < oneshot_range)
             {
                 ros::Time t1 = ros::Time::now();
@@ -106,7 +116,6 @@ namespace uneven_planner
             open_set.pop();
             cur_node->node_state = CLOSE;
             iter_num += 1;
-
             Eigen::Vector3d cur_state = cur_node->state;
             Eigen::Vector3d pro_state;
             Eigen::Vector2d ctrl_input;
@@ -125,12 +134,13 @@ namespace uneven_planner
             {
                 Eigen::Vector2d input = inputs[i];
                 stateTransit(cur_state, pro_state, input, time_interval);
+
                 expanded_points.points.push_back(pcl::PointXYZ(cur_state.x(), cur_state.y(), 0.0));
                 // visExpanded();
 
                 if (!global_map->isInMap(pro_state.head(2)))
                 {
-                    // std::cout << "[Kino Astar]: out of map range" << std::endl;
+                    //std::cout << "[Kino Astar]: out of map range" << std::endl;
                     continue;
                 }
 
@@ -149,11 +159,13 @@ namespace uneven_planner
                 int occ = false;
                 double arc = input(0) * time_interval;
                 double temp_ct = collision_interval / arc * time_interval;
+
                 for (double t = temp_ct; t <= time_interval+1e-3; t+=temp_ct)
                 {
-                    stateTransit(cur_state, xt, input, t);
 
+                    stateTransit(cur_state, xt, input, t);
                     occ = global_map->isOccupancy(xt.head(2));
+
 
                     if (occ == 1)
                         break;
@@ -170,7 +182,6 @@ namespace uneven_planner
                 //tmp_g_score += weight_sigma * uneven_map->getTerrainSig(pro_state);
                 tmp_g_score += cur_node->g_score;
                 tmp_f_score = tmp_g_score + lambda_heu * getHeu(pro_state, end_pt);
-
                 if (pro_node == NULL)
                 {
                     pro_node = path_node_pool[use_node_num];
