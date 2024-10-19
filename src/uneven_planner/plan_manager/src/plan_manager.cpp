@@ -75,7 +75,7 @@ namespace uneven_planner
             return;
         }
         PublishPath(init_path);
-        std::cout << "plan success! path_size=" << init_path.size() << std::endl;
+        std::cout << "hybrid A* plan success!" << std::endl;
         /*
         // minco optimize
         traj_opt_flow->Run(init_path);

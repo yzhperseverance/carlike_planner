@@ -21,6 +21,7 @@ manager_node:
     weight_v_change: 0.0
     weight_delta_change: 0.0
     weight_sigma: 10.0
+    weight_reverse: 3.0
     time_interval: 0.3
     collision_interval: 0.06
     oneshot_range: 1.0

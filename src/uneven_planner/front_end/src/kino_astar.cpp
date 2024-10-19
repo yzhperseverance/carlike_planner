@@ -11,6 +11,7 @@ namespace uneven_planner
         nh.param("kino_astar/weight_v_change", weight_v_change, 0.0);
         nh.param("kino_astar/weight_delta_change", weight_delta_change, 0.0);
         nh.param("kino_astar/weight_sigma", weight_sigma, 0.0);
+        nh.param("kino_astar/weight_reverse", weight_reverse, 3.0);
         nh.param("kino_astar/time_interval", time_interval, 1.0);
         nh.param("kino_astar/collision_interval", collision_interval, 1.0);
         nh.param("kino_astar/oneshot_range", oneshot_range, 1.0);
@@ -51,7 +52,7 @@ namespace uneven_planner
         front_end_path.clear();
         expanded_nodes.clear();
         expanded_points.clear();
-
+        std::cout << "start planning" << std::endl;
         for (int i = 0; i < use_node_num; i++)
         {
             PathNodePtr node = path_node_pool[i];
@@ -88,7 +89,7 @@ namespace uneven_planner
         cur_node->input = Eigen::Vector2d(0.0, 0.0);
         cur_node->f_score = lambda_heu * getHeu(cur_node->state, end_pt);
         cur_node->node_state = OPEN;
-
+        cur_node->direction_ = PathNode::NO;
         open_set.push(cur_node);
         use_node_num += 1;
         expanded_nodes.insert(cur_node->index, cur_node);
@@ -121,9 +122,14 @@ namespace uneven_planner
             Eigen::Vector2d ctrl_input;
             std::vector<Eigen::Vector2d> inputs;
 
-            for (double v = 0; v <= max_vel + 1e-3; v += 0.5*max_vel)
+            for (double steer = -max_steer; steer <= max_steer + 1e-3; steer += 0.5*max_steer)
             {
-                for (double steer = -max_steer; steer <= max_steer + 1e-3; steer += 0.5*max_steer)
+                for (double v = -max_vel; v < 0; v += 0.5*max_vel)
+                {
+                    ctrl_input << v, steer;
+                    inputs.push_back(ctrl_input);
+                }
+                for (double v = max_vel + 1e-3; v > 0; v -= 0.5*max_vel)
                 {
                     ctrl_input << v, steer;
                     inputs.push_back(ctrl_input);
@@ -148,6 +154,7 @@ namespace uneven_planner
                 PathNodePtr pro_node;
 
                 stateToIndex(pro_state, pro_id, 0);
+
                 pro_node = expanded_nodes.find(pro_id);
 
                 if (pro_node != NULL && pro_node->node_state == CLOSE)
@@ -157,7 +164,7 @@ namespace uneven_planner
 
                 Eigen::Vector3d xt;
                 int occ = false;
-                double arc = input(0) * time_interval;
+                double arc = fabs(input(0) * time_interval);
                 double temp_ct = collision_interval / arc * time_interval;
 
                 for (double t = temp_ct; t <= time_interval+1e-3; t+=temp_ct)
@@ -179,6 +186,10 @@ namespace uneven_planner
                 tmp_g_score += weight_so2 * fabs(input(1)) * arc;
                 tmp_g_score += weight_v_change * std::fabs(input(0)-cur_node->input(0));
                 tmp_g_score += weight_delta_change * std::fabs(input(1)-cur_node->input(1));
+                if(input(0) < 0){
+                    tmp_g_score *= weight_reverse; // 倒车惩罚
+                }
+
                 //tmp_g_score += weight_sigma * uneven_map->getTerrainSig(pro_state);
                 tmp_g_score += cur_node->g_score;
                 tmp_f_score = tmp_g_score + lambda_heu * getHeu(pro_state, end_pt);

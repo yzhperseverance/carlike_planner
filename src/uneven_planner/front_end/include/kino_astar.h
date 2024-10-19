@@ -33,12 +33,16 @@
     class PathNode
     {
         public:
+        enum DIRECTION {
+            FORWARD = 0, BACKWARD = 1, NO = 3
+        };
             Eigen::Vector3i index;
             Eigen::Vector3d state;
             Eigen::Vector2d input;
             double g_score;
             double f_score;
             char node_state;
+            DIRECTION direction_{};
             PathNode* parent;
             PathNode(): parent(nullptr), node_state(NOT_EXPAND) {}
             ~PathNode() {}
@@ -120,6 +124,7 @@ namespace uneven_planner
             double weight_v_change;
             double weight_delta_change;
             double weight_sigma;
+            double weight_reverse;
             double time_interval;
             double oneshot_range;
             double collision_interval;
