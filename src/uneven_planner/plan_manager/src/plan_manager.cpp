@@ -50,8 +50,9 @@ namespace uneven_planner
         Eigen::Matrix3d R(q);
         odom_pos(2) = UnevenMap::calYawFromR(R);
     }
-        global_map->init(msg);
+
     void PlanManager::rcvGlobalMapCallBack(const nav_msgs::OccupancyGridPtr& msg) {
+        global_map->init(msg);
         kino_astar->setEnvironment(global_map);
         std::cout << "receive global map" << std::endl;
     }
