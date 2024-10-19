@@ -50,6 +50,7 @@ namespace uneven_planner
             void rcvOdomCallBack(const nav_msgs::OdometryConstPtr& msg);
             void rcvWpsCallBack(const geometry_msgs::PoseStamped msg);
             void rcvGlobalMapCallBack(const nav_msgs::OccupancyGridPtr& msg);
+            void rcvGlobalMapCallBack(const nav_msgs::OccupancyGridPtr& msg);
             void PublishPath(const std::vector<Eigen::Vector3d> &path);
     };
 }
