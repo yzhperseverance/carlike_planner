@@ -25,6 +25,7 @@
 
 #ifndef _SDF_MAP_H
 #define _SDF_MAP_H
+#include <ros/ros.h>
 
 #include <Eigen/Eigen>
 #include <Eigen/StdVector>
@@ -40,10 +41,14 @@
 #include <sensor_msgs/LaserScan.h>
 #include <laser_geometry/laser_geometry.h>
 #include <tf/transform_listener.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl_ros/transforms.h>
+#include <pcl/common/transforms.h>
 
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
@@ -80,6 +85,7 @@ namespace uneven_planner {
         Eigen::Vector2d local_update_range_;
         double resolution_, resolution_inv_;
         double obstacles_inflation_;
+        double lidar_pos_x, lidar_pos_y;
         string frame_id_;
         int pose_type_;
         string map_input_;  // 1: pose+depth; 2: odom + cloud
@@ -200,15 +206,16 @@ namespace uneven_planner {
 
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    private:
+
         MappingParameters mp_;
         MappingData md_;
-
+    private:
         template<typename F_get_val, typename F_set_val>
         void fillESDF(F_get_val f_get_val, F_set_val f_set_val, int start, int end, int dim);
 
-        // get depth image and camera pose
-        void cloudCallback(const sensor_msgs::LaserScanConstPtr &scan);
+        // get cloud and odom
+        void cloudOdomCallback(const sensor_msgs::LaserScanConstPtr &scan,
+                               const nav_msgs::OdometryConstPtr& odom);
 
         void odomCallback(const nav_msgs::OdometryConstPtr &odom);
 
@@ -220,17 +227,26 @@ namespace uneven_planner {
         Eigen::Vector3d closetPointInMap(const Eigen::Vector3d &pt, const Eigen::Vector3d &camera_pt);
 
         ros::NodeHandle node_;
-        shared_ptr<message_filters::Subscriber < geometry_msgs::PoseStamped>> pose_sub_;
+        shared_ptr<message_filters::Subscriber < sensor_msgs::LaserScan>> cloud_sub_;
         shared_ptr<message_filters::Subscriber < nav_msgs::Odometry>> odom_sub_;
+        typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::LaserScan, nav_msgs::Odometry>
+                SyncPolicyCloudOdom;
+        typedef shared_ptr<message_filters::Synchronizer<SyncPolicyCloudOdom>> SynchronizerCloudOdom;
+        SynchronizerCloudOdom sync_cloud_odom_;
 
         ros::Subscriber indep_depth_sub_, indep_odom_sub_, indep_pose_sub_, indep_cloud_sub_;
         ros::Publisher map_pub_, esdf_pub_, map_inf_pub_, update_range_pub_;
         ros::Timer esdf_timer_, vis_timer_;
+        tf::TransformListener listener;
 
         //
         uniform_real_distribution<double> rand_noise_;
         normal_distribution<double> rand_noise2_;
         default_random_engine eng_;
+
+
+        std::mutex buff_mutex_;
+        std::mutex buff_mutex_cloud;
     };
 
 /* ============================== definition of inline function

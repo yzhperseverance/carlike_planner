@@ -208,12 +208,10 @@ namespace uneven_planner
     {
         this->global_map = env;
         allocate_num = global_map->getXYNum();
-        std::cout << "allocate_num=" << allocate_num << std::endl;
         for (int i = 0; i < allocate_num; i++)
         {
             path_node_pool.push_back(new PathNode());
         }
-        std::cout << "path_node_pool.size=" << path_node_pool.size() << std::endl;
     }
     inline int KinoAstar::yawToIndex(const double &yaw)
     {

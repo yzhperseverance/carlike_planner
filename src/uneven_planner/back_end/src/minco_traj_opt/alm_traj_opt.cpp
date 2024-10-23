@@ -12,6 +12,7 @@ namespace uneven_planner
         nh.getParam("alm_traj_opt/max_kap", max_kap);
         nh.getParam("alm_traj_opt/min_cxi", min_cxi);
         nh.getParam("alm_traj_opt/max_sig", max_sig);
+        nh.getParam("alm_traj_opt/dist0", dist0);
         nh.getParam("alm_traj_opt/use_scaling", use_scaling);
         nh.getParam("alm_traj_opt/rho", rho);
         nh.getParam("alm_traj_opt/beta", beta);
@@ -65,7 +66,7 @@ namespace uneven_planner
         // non-holonomic
         equal_num = piece_xy * (int_K + 1); // int_K是中间点的个数，不算每段的起始点，所以要+1
         // longitude velocity, longitude acceleration, latitude acceleration, curvature, attitude, surface variation
-        non_equal_num = piece_xy * (int_K + 1) * 6; // 有6个约束
+        non_equal_num = piece_xy * (int_K + 1) * 5; // 有5个约束
         hx.setZero(equal_num);
         lambda.setZero(equal_num);
         gx.setZero(non_equal_num);
@@ -270,11 +271,12 @@ namespace uneven_planner
         double          yaw, dyaw, d2yaw;
         double          cyaw, syaw, v_norm;
         double          lon_acc, lat_acc, curv_snorm, vx, wz, ax, ay;
-        double          gravity = uneven_map->getGravity();
+        double          dist;
         Eigen::Vector2d grad_p = Eigen::Vector2d::Zero();
         Eigen::Vector2d grad_v = Eigen::Vector2d::Zero();
         Eigen::Vector2d grad_a = Eigen::Vector2d::Zero();
-        Eigen::Vector3d grad_se2 = Eigen::Vector3d::Zero();
+        Eigen::Vector2d grad_dist = Eigen::Vector2d::Zero();
+
         double          grad_yaw = 0.0;
         double          grad_dyaw = 0.0;
         double          grad_d2yaw = 0.0;
@@ -312,7 +314,6 @@ namespace uneven_planner
                 grad_wz = 0.0;
                 grad_ax = 0.0;
                 grad_ay = 0.0;
-                grad_se2.setZero();
 
                 // analyse xy
                 computeBeta(s1, beta0_xy, beta1_xy, beta2_xy, beta3_xy);
@@ -334,8 +335,6 @@ namespace uneven_planner
                 d2yaw = c_yaw.transpose() * beta2_yaw;
 
                 // analyse complex variable
-                se2_pos = Eigen::Vector3d(pos(0), pos(1), yaw);
-                UnevenMap::normSO2(se2_pos(2));
                 syaw = sin(yaw);
                 cyaw = cos(yaw);
                 v_norm = vel.norm();
@@ -344,29 +343,14 @@ namespace uneven_planner
                 lon_acc = acc.dot(xb);
                 lat_acc = acc.dot(yb);
 
-                // analyse terrain
-                uneven_map->getAllWithGrad(se2_pos, terrain_values, terrain_grads);
 
-
-                vx = v_norm * terrain_values[TERRAIN_INDEX::inv_cos_vphix];
-                wz = dyaw * terrain_values[TERRAIN_INDEX::inv_cos_xi];
-                ax = lon_acc * terrain_values[TERRAIN_INDEX::inv_cos_vphix] + gravity * terrain_values[TERRAIN_INDEX::sin_phix];
-                ay = lat_acc * terrain_values[TERRAIN_INDEX::inv_cos_vphiy] + gravity * terrain_values[TERRAIN_INDEX::sin_phiy];
+                vx = v_norm;
+                wz = dyaw;
+                ax = lon_acc;
+                ay = lat_acc;
                 curv_snorm = wz * wz / (vx*vx + delta_sigl);
+                sdf_map->evaluateEDTWithGrad(pos, -1.0, dist, grad_dist);
 
-                // user-defined cost: surface variation
-                if (j==0 || j==int_K)
-                    omega = 0.5 * rho_ter * step;
-                else
-                    omega = rho_ter * step;
-                double user_cost = omega * terrain_values[TERRAIN_INDEX::sigma] * terrain_values[TERRAIN_INDEX::sigma];
-                grad_se2 = omega * terrain_grads[TERRAIN_INDEX::sigma] * terrain_values[TERRAIN_INDEX::sigma] * 2.0;
-                gdTxy_fx(i) += user_cost / int_K;
-                gdCxy_fx.block<6, 2>(i * 6, 0) += beta0_xy * grad_se2.head(2).transpose();
-                gdTxy_fx(i) += grad_se2.head(2).dot(vel) * alpha;
-                gdCyaw_fx.block<6, 1>(yaw_idx * 6, 0) += (beta0_yaw * grad_se2(2));
-                gdTyaw_fx(yaw_idx) += -(grad_se2(2) * dyaw) * yaw_idx;
-                gdTxy_fx(i) += (grad_se2(2) * dyaw) * (alpha+i);
 
                 // non-holonomic
                 grad_v = Eigen::Vector2d(syaw, -cyaw);
@@ -380,30 +364,17 @@ namespace uneven_planner
                 
                 // longitude velocity
                 grad_vx2 = 1.0;
-                grad_v = grad_vx2 * terrain_values[TERRAIN_INDEX::inv_cos_vphix] * terrain_values[TERRAIN_INDEX::inv_cos_vphix] * 2.0 * vel;
-                grad_se2 = grad_vx2 * v_norm * v_norm * 2.0 * terrain_values[TERRAIN_INDEX::inv_cos_vphix] * terrain_grads[TERRAIN_INDEX::inv_cos_vphix];
-                grad_p = grad_se2.head(2);
-                grad_yaw = grad_se2(2);
-                gdCxy[constrain_idx].block<6, 2>(i * 6, 0) += (beta0_xy * grad_p.transpose() + \
-                                                               beta1_xy * grad_v.transpose());
-                gdTxy[constrain_idx](i) += (grad_p.dot(vel) + \
-                                            grad_v.dot(acc)) * alpha;
-                gdCyaw[constrain_idx].block<6, 1>(yaw_idx * 6, 0) += beta0_yaw * grad_yaw;
-                gdTyaw[constrain_idx](yaw_idx) += -(grad_yaw * dyaw) * yaw_idx;
-                gdTxy[constrain_idx](i) += (grad_yaw * dyaw) * (alpha+i);
+                grad_v = grad_vx2 * 2.0 * vel;
+                gdCxy[constrain_idx].block<6, 2>(i * 6, 0) += beta1_xy * grad_v.transpose();
+                gdTxy[constrain_idx](i) += grad_v.dot(acc) * alpha;
                 constrain_idx++;
 
                 // longitude acceleration
                 grad_ax = 2.0 * ax;
-                grad_a = grad_ax * terrain_values[TERRAIN_INDEX::inv_cos_vphix] * xb;
-                grad_yaw = grad_ax * terrain_values[TERRAIN_INDEX::inv_cos_vphix] * lat_acc;
-                grad_se2 = grad_ax * (gravity * terrain_grads[TERRAIN_INDEX::sin_phix] + terrain_grads[TERRAIN_INDEX::inv_cos_vphix] * lon_acc);
-                grad_p = grad_se2.head(2);
-                grad_yaw += grad_se2(2);
-                gdCxy[constrain_idx].block<6, 2>(i * 6, 0) += (beta0_xy * grad_p.transpose() + \
-                                                               beta2_xy * grad_a.transpose());
-                gdTxy[constrain_idx](i) += (grad_p.dot(vel) + \
-                                            grad_a.dot(jer) ) * alpha;
+                grad_a = grad_ax * xb;
+                grad_yaw = grad_ax * lat_acc;
+                gdCxy[constrain_idx].block<6, 2>(i * 6, 0) += beta2_xy * grad_a.transpose();
+                gdTxy[constrain_idx](i) += grad_a.dot(jer) * alpha;
                 gdCyaw[constrain_idx].block<6, 1>(yaw_idx * 6, 0) += beta0_yaw * grad_yaw;
                 gdTyaw[constrain_idx](yaw_idx) += -(grad_yaw * dyaw) * yaw_idx;
                 gdTxy[constrain_idx](i) += (grad_yaw * dyaw) * (alpha+i);
@@ -411,64 +382,35 @@ namespace uneven_planner
 
                 // latitude acceleration
                 grad_ay = 2.0 * ay;
-                grad_a = grad_ay * terrain_values[TERRAIN_INDEX::inv_cos_vphiy] * yb;
-                grad_yaw = -grad_ay * terrain_values[TERRAIN_INDEX::inv_cos_vphiy] * lon_acc;
-                grad_se2 = grad_ay * (gravity * terrain_grads[TERRAIN_INDEX::sin_phiy] + terrain_grads[TERRAIN_INDEX::inv_cos_vphiy] * lat_acc);
-                grad_p = grad_se2.head(2);
-                grad_yaw += grad_se2(2);
-                gdCxy[constrain_idx].block<6, 2>(i * 6, 0) += (beta0_xy * grad_p.transpose() + \
-                                                               beta2_xy * grad_a.transpose());
-                gdTxy[constrain_idx](i) += (grad_p.dot(vel) + \
-                                            grad_a.dot(jer) ) * alpha;
+                grad_a = grad_ay * yb;
+                grad_yaw = -grad_ay * lon_acc;
+                gdCxy[constrain_idx].block<6, 2>(i * 6, 0) += beta2_xy * grad_a.transpose();
+                gdTxy[constrain_idx](i) += grad_a.dot(jer) * alpha;
                 gdCyaw[constrain_idx].block<6, 1>(yaw_idx * 6, 0) += beta0_yaw * grad_yaw;
                 gdTyaw[constrain_idx](yaw_idx) += -(grad_yaw * dyaw) * yaw_idx;
                 gdTxy[constrain_idx](i) += (grad_yaw * dyaw) * (alpha+i);
+                constrain_idx++;
+
+                // obstacle distance
+                grad_p = 2 * (dist - dist0) * grad_dist;
+                gdCxy[constrain_idx].block<6, 2>(i * 6, 0) += beta0_xy * grad_p.transpose();
+                gdTxy[constrain_idx](i) += grad_p.dot(vel) * alpha;
                 constrain_idx++;
 
                 // curvature
                 double denominator = 1.0 / (vx*vx + delta_sigl);
                 grad_wz = denominator * 2.0 * wz;
                 grad_vx2 = -curv_snorm * denominator;
-                grad_dyaw = grad_wz * terrain_values[TERRAIN_INDEX::inv_cos_xi];
-                grad_se2 = grad_wz * dyaw * terrain_grads[TERRAIN_INDEX::inv_cos_xi];
-                grad_v = grad_vx2 * terrain_values[TERRAIN_INDEX::inv_cos_vphix] * terrain_values[TERRAIN_INDEX::inv_cos_vphix] * 2.0 * vel;
-                grad_se2 += grad_vx2 * v_norm * v_norm * 2.0 * terrain_values[TERRAIN_INDEX::inv_cos_vphix] * terrain_grads[TERRAIN_INDEX::inv_cos_vphix];
-                grad_p = grad_se2.head(2);
-                grad_yaw = grad_se2(2);
-                gdCxy[constrain_idx].block<6, 2>(i * 6, 0) += (beta0_xy * grad_p.transpose() + \
-                                                               beta1_xy * grad_v.transpose());
-                gdTxy[constrain_idx](i) += (grad_p.dot(vel) + \
-                                            grad_v.dot(acc)) * alpha;
-                gdCyaw[constrain_idx].block<6, 1>(yaw_idx * 6, 0) += (beta0_yaw * grad_yaw + \
-                                                                      beta1_yaw * grad_dyaw);
-                gdTyaw[constrain_idx](yaw_idx) += -(grad_yaw * dyaw +
-                                                    grad_dyaw * d2yaw) * yaw_idx;
-                gdTxy[constrain_idx](i) += (grad_yaw * dyaw +
-                                            grad_dyaw * d2yaw) * (alpha+i);
+                grad_dyaw = grad_wz;
+                grad_v = grad_vx2 * 2.0 * vel;
+
+                gdCxy[constrain_idx].block<6, 2>(i * 6, 0) += beta1_xy * grad_v.transpose();
+                gdTxy[constrain_idx](i) += grad_v.dot(acc) * alpha;
+                gdCyaw[constrain_idx].block<6, 1>(yaw_idx * 6, 0) += beta1_yaw * grad_dyaw;
+                gdTyaw[constrain_idx](yaw_idx) += -grad_dyaw * d2yaw * yaw_idx;
+                gdTxy[constrain_idx](i) += grad_dyaw * d2yaw * (alpha+i);
                 constrain_idx++;
 
-                // attitude
-                grad_se2 = -terrain_grads[TERRAIN_INDEX::inv_cos_xi];
-                grad_p = grad_se2.head(2);
-                grad_yaw = grad_se2(2);
-                gdCxy[constrain_idx].block<6, 2>(i * 6, 0) += (beta0_xy * grad_p.transpose());
-                gdTxy[constrain_idx](i) += grad_p.dot(vel) * alpha;
-                gdCyaw[constrain_idx].block<6, 1>(yaw_idx * 6, 0) += beta0_yaw * grad_yaw;
-                gdTyaw[constrain_idx](yaw_idx) += -(grad_yaw * dyaw) * yaw_idx;
-                gdTxy[constrain_idx](i) += (grad_yaw * dyaw) * (alpha+i);
-                constrain_idx++;
-
-                // surface variation
-                grad_se2 = terrain_grads[TERRAIN_INDEX::sigma];
-                grad_p = grad_se2.head(2);
-                grad_yaw = grad_se2(2);
-                gdCxy[constrain_idx].block<6, 2>(i * 6, 0) += (beta0_xy * grad_p.transpose());
-                gdTxy[constrain_idx](i) += grad_p.dot(vel) * alpha;
-                gdCyaw[constrain_idx].block<6, 1>(yaw_idx * 6, 0) += beta0_yaw * grad_yaw;
-                gdTyaw[constrain_idx](yaw_idx) += -(grad_yaw * dyaw) * yaw_idx;
-                gdTxy[constrain_idx](i) += (grad_yaw * dyaw) * (alpha+i);
-                constrain_idx++;
-                
                 s1 += step;
             }
             base_time += minco_se2.pos_minco.T1(i);
@@ -521,18 +463,16 @@ namespace uneven_planner
 
         Eigen::Vector2d pos, vel, acc, jer;
         Eigen::Vector2d xb, yb;
-        Eigen::Vector3d se2_pos;
-        vector<double> terrain_values;
-        vector<Eigen::Vector3d> terrain_grads;
+
         double          yaw, dyaw, d2yaw;
         double          cyaw, syaw, v_norm;
         double          lon_acc, lat_acc, curv_snorm, vx, wz, ax, ay;
-
-        double          gravity = uneven_map->getGravity();
+        double          dist;
         Eigen::Vector2d grad_p = Eigen::Vector2d::Zero();
         Eigen::Vector2d grad_v = Eigen::Vector2d::Zero();
         Eigen::Vector2d grad_a = Eigen::Vector2d::Zero();
         Eigen::Vector3d grad_se2 = Eigen::Vector3d::Zero();
+        Eigen::Vector2d grad_dist = Eigen::Vector2d::Zero();
 
         double          grad_yaw = 0.0;
         double          grad_dyaw = 0.0;
@@ -542,6 +482,7 @@ namespace uneven_planner
         double          grad_wz = 0.0;
         double          grad_ax = 0.0;
         double          grad_ay = 0.0;
+
         Eigen::Matrix<double, 6, 1> beta0_xy, beta1_xy, beta2_xy, beta3_xy;
         Eigen::Matrix<double, 6, 1> beta0_yaw, beta1_yaw, beta2_yaw, beta3_yaw;
         double s1;
@@ -599,8 +540,6 @@ namespace uneven_planner
                 d2yaw = c_yaw.transpose() * beta2_yaw;
 
                 // analyse complex variable
-                se2_pos = Eigen::Vector3d(pos(0), pos(1), yaw);
-                UnevenMap::normSO2(se2_pos(2));
                 syaw = sin(yaw);
                 cyaw = cos(yaw);
                 v_norm = vel.norm();
@@ -609,25 +548,14 @@ namespace uneven_planner
                 lon_acc = acc.dot(xb);
                 lat_acc = acc.dot(yb);
 
-                // analyse terrain
-                uneven_map->getAllWithGrad(se2_pos, terrain_values, terrain_grads);
 
-                vx = v_norm * terrain_values[TERRAIN_INDEX::inv_cos_vphix];
-                wz = dyaw * terrain_values[TERRAIN_INDEX::inv_cos_xi];
-                ax = lon_acc * terrain_values[TERRAIN_INDEX::inv_cos_vphix] + gravity * terrain_values[TERRAIN_INDEX::sin_phix];
-                ay = lat_acc * terrain_values[TERRAIN_INDEX::inv_cos_vphiy] + gravity * terrain_values[TERRAIN_INDEX::sin_phiy];
+                vx = v_norm;
+                wz = dyaw;
+                ax = lon_acc;
+                ay = lat_acc;
                 curv_snorm = wz * wz / (vx*vx + delta_sigl); // wz^2 / (vx^2 + δ)
+                sdf_map->evaluateEDTWithGrad(pos, -1.0, dist, grad_dist);
 
-                // user-defined cost: surface variation 地形的cost
-                // 计算当前路径的坡度cost，也算是平滑项的一种
-                if (j==0 || j==int_K)
-                    omega = 0.5 * rho_ter * step * scale_fx; // 为什么在边界点cost要小一点？ 梯形积分法
-                else
-                    omega = rho_ter * step * scale_fx;
-                double user_cost = omega * terrain_values[TERRAIN_INDEX::sigma] * terrain_values[TERRAIN_INDEX::sigma];
-                cost += user_cost;
-                grad_se2 += omega * terrain_grads[TERRAIN_INDEX::sigma] * terrain_values[TERRAIN_INDEX::sigma] * 2.0;
-                gdTxy(i) += user_cost / int_K; // TODO：这为啥这么算？？
                 // hx是等式约束，gx是不等式约束
                 // non-holonomic
                 // 这里保证了xy和yaw的方向不会冲突，因为只有速度方向和yaw的方向一致这项才会趋于0
@@ -690,6 +618,23 @@ namespace uneven_planner
                 non_equal_idx++;
                 constrain_idx++;
 
+                // obstacle distance
+                double dist_mu = mu[non_equal_idx];
+                gx[non_equal_idx] = pow(dist - dist0, 2) * scale_cx(constrain_idx);
+
+                if (rho * gx[non_equal_idx] + dist_mu > 0)
+                {
+                    cost += getAugmentedCost(gx[non_equal_idx], dist_mu);
+                    aug_grad = getAugmentedGrad(gx[non_equal_idx], dist_mu) * scale_cx(constrain_idx);
+                    grad_p += aug_grad * 2.0 * (dist - dist0) * grad_dist;
+                }
+                else
+                {
+                    cost += -0.5 * dist_mu * dist_mu / rho;
+                }
+                non_equal_idx++;
+                constrain_idx++;
+
                 // curvature 曲率 这就是车的转角约束啊！！！
                 double curv_mu = mu[non_equal_idx];
                 if (use_scaling)
@@ -715,59 +660,17 @@ namespace uneven_planner
                 non_equal_idx++;
                 constrain_idx++;
 
-                // attitude
-                double att_mu = mu[non_equal_idx];
-                gx[non_equal_idx] = (min_cxi - cos_xi) * scale_cx(constrain_idx);
-                if (rho * gx[non_equal_idx] + att_mu > 0)
-                {
-                    cost += getAugmentedCost(gx[non_equal_idx], att_mu);
-                    grad_se2 -= getAugmentedGrad(gx[non_equal_idx], att_mu) * terrain_grads[TERRAIN_INDEX::cos_xi] * scale_cx(constrain_idx);
-                }
-                else
-                {
-                    cost += -0.5 * att_mu * att_mu / rho;
-                }
-                non_equal_idx++;
-                constrain_idx++;
-
-                // surface variation
-                double sig_mu = mu[non_equal_idx];
-                if (use_scaling)
-                    gx[non_equal_idx] = (terrain_values[TERRAIN_INDEX::sigma] - max_sig) * scale_cx(constrain_idx);
-                else
-                    gx[non_equal_idx] = (terrain_values[TERRAIN_INDEX::sigma] - max_sig) * sig_scale;
-                if (rho * gx[non_equal_idx] + sig_mu > 0)
-                {
-                    cost += getAugmentedCost(gx[non_equal_idx], sig_mu);
-                    if (use_scaling)
-                        grad_se2 += getAugmentedGrad(gx[non_equal_idx], sig_mu) * terrain_grads[TERRAIN_INDEX::sigma] * scale_cx(constrain_idx);
-                    else
-                        grad_se2 += getAugmentedGrad(gx[non_equal_idx], sig_mu) * terrain_grads[TERRAIN_INDEX::sigma] * sig_scale;
-                }
-                else
-                {
-                    cost += -0.5 * sig_mu * sig_mu / rho;
-                }
-                non_equal_idx++;
-                constrain_idx++;
 
                 // process with vx, wz, ax
-                grad_v += grad_vx2 * terrain_values[TERRAIN_INDEX::inv_cos_vphix] * terrain_values[TERRAIN_INDEX::inv_cos_vphix] * 2.0 * vel; //  把vx2的导数传给v
-                grad_se2 += grad_vx2 * v_norm * v_norm * 2.0 * terrain_values[TERRAIN_INDEX::inv_cos_vphix] * terrain_grads[TERRAIN_INDEX::inv_cos_vphix];
-                
-                grad_dyaw += grad_wz * terrain_values[TERRAIN_INDEX::inv_cos_xi];
-                grad_se2 += grad_wz * dyaw * terrain_grads[TERRAIN_INDEX::inv_cos_xi];
+                grad_v += grad_vx2 * 2.0 * vel; //  把vx2的导数传给v
 
-                grad_a += grad_ax * terrain_values[TERRAIN_INDEX::inv_cos_vphix] * xb;
-                grad_yaw += grad_ax * terrain_values[TERRAIN_INDEX::inv_cos_vphix] * lat_acc;
-                grad_se2 += grad_ax * (gravity * terrain_grads[TERRAIN_INDEX::sin_phix] + terrain_grads[TERRAIN_INDEX::inv_cos_vphix] * lon_acc);
+                grad_dyaw += grad_wz;
 
-                grad_a += grad_ay * terrain_values[TERRAIN_INDEX::inv_cos_vphiy] * yb;
-                grad_yaw -= grad_ay * terrain_values[TERRAIN_INDEX::inv_cos_vphiy] * lon_acc;
-                grad_se2 += grad_ay * (gravity * terrain_grads[TERRAIN_INDEX::sin_phiy] + terrain_grads[TERRAIN_INDEX::inv_cos_vphiy] * lat_acc);
+                grad_a += grad_ax * xb;
+                grad_yaw += grad_ax * lat_acc;
 
-                grad_p += grad_se2.head(2);
-                grad_yaw += grad_se2(2);
+                grad_a += grad_ay * yb;
+                grad_yaw -= grad_ay * lon_acc;
 
                 //K(c,T) = jerk_cost + constrain_cost,这里是在算∂K/∂constrain_cost
                 // add all grad into C,T

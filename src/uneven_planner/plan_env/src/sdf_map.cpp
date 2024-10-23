@@ -53,14 +53,15 @@ namespace uneven_planner {
         node_.param("sdf_map/frame_id", mp_.frame_id_, string("world"));
         node_.param("sdf_map/local_bound_inflate", mp_.local_bound_inflate_, 1.0);
         node_.param("sdf_map/local_map_margin", mp_.local_map_margin_, 1);
-        node_.param("sdf_map/ground_height", mp_.ground_height_, 1.0);
+
+        node_.param("sdf_map/lidar_pos_x", mp_.lidar_pos_x, 0.0);
+        node_.param("sdf_map/lidar_pos_y", mp_.lidar_pos_y, 0.0);
 
         mp_.local_bound_inflate_ = max(mp_.resolution_, mp_.local_bound_inflate_);
         mp_.resolution_inv_ = 1 / mp_.resolution_;
         mp_.map_origin_ = Eigen::Vector2d(-x_size / 2.0, -y_size / 2.0);
         mp_.map_size_ = Eigen::Vector2d(x_size, y_size);
 
-        mp_.unknown_flag_ = 0.01;
 
         for (int i = 0; i < 2; ++i) mp_.map_voxel_num_(i) = ceil(mp_.map_size_(i) / mp_.resolution_);
 
@@ -88,11 +89,16 @@ namespace uneven_planner {
 
 
         // use odometry and point cloud
+        odom_sub_.reset(new message_filters::Subscriber<nav_msgs::Odometry>(node_, "odom", 100));
+        cloud_sub_.reset(new message_filters::Subscriber<sensor_msgs::LaserScan>(node_, "cloud", 100));
+        sync_cloud_odom_.reset(new message_filters::Synchronizer<SyncPolicyCloudOdom>(
+                SyncPolicyCloudOdom(100), *cloud_sub_, *odom_sub_));
+        sync_cloud_odom_->registerCallback(boost::bind(&SDFMap::cloudOdomCallback, this, _1, _2));
 
-        indep_cloud_sub_ =
-                node_.subscribe<sensor_msgs::LaserScan>("/scan", 10, &SDFMap::cloudCallback, this);
-        indep_odom_sub_ =
-                node_.subscribe<nav_msgs::Odometry>("/amcl_pose", 10, &SDFMap::odomCallback, this);
+//        indep_cloud_sub_ =
+//                node_.subscribe<sensor_msgs::LaserScan>("cloud", 10, &SDFMap::cloudCallback, this);
+//        indep_odom_sub_ =
+//                node_.subscribe<nav_msgs::Odometry>("odom", 10, &SDFMap::odomCallback, this);
 
         esdf_timer_ = node_.createTimer(ros::Duration(0.05), &SDFMap::updateESDFCallback, this);
         vis_timer_ = node_.createTimer(ros::Duration(0.05), &SDFMap::visCallback, this);
@@ -118,6 +124,7 @@ namespace uneven_planner {
         rand_noise2_ = normal_distribution<double>(0, 0.2);
         random_device rd;
         eng_ = default_random_engine(rd());
+
     }
 
     void SDFMap::resetBuffer() {
@@ -260,29 +267,6 @@ namespace uneven_planner {
             }
     }
 
-/*
-Eigen::Vector3d SDFMap::closetPointInMap(const Eigen::Vector3d& pt, const Eigen::Vector2d& camera_pt) {
-  Eigen::Vector3d diff = pt - camera_pt;
-  Eigen::Vector3d max_tc = mp_.map_max_boundary_ - camera_pt;
-  Eigen::Vector3d min_tc = mp_.map_min_boundary_ - camera_pt;
-
-  double min_t = 1000000;
-
-  for (int i = 0; i < 3; ++i) {
-    if (fabs(diff[i]) > 0) {
-
-      double t1 = max_tc[i] / diff[i];
-      if (t1 > 0 && t1 < min_t) min_t = t1;
-
-      double t2 = min_tc[i] / diff[i];
-      if (t2 > 0 && t2 < min_t) min_t = t2;
-    }
-  }
-
-  return camera_pt + (min_t - 1e-3) * diff;
-}
-*/
-
     void SDFMap::visCallback(const ros::TimerEvent & /*event*/) {
         publishMap();
         publishMapInflate(false);
@@ -310,28 +294,35 @@ Eigen::Vector3d SDFMap::closetPointInMap(const Eigen::Vector3d& pt, const Eigen:
         md_.esdf_need_update_ = false;
     }
 
-    void SDFMap::odomCallback(const nav_msgs::OdometryConstPtr &odom) {
-        // base_link->laser_link
-        tf::TransformListener listener;
-        tf::StampedTransform transform;
-        listener.lookupTransform("base_link", "laser_link", ros::Time(0), transform);
-        // 发布base_link在map系的坐标
-        md_.lidar_pos_(0) = odom->pose.pose.position.x + transform.getOrigin().x();
-        md_.lidar_pos_(1) = odom->pose.pose.position.y + transform.getOrigin().y();
+//    void SDFMap::odomCallback(const nav_msgs::OdometryConstPtr &odom) {
+//        // base_link->laser_link
+//        // 发布base_link在map系的坐标
+//        buff_mutex_.lock();
+//        md_.lidar_pos_(0) = odom->pose.pose.position.x + mp_.lidar_pos_x;
+//        md_.lidar_pos_(1) = odom->pose.pose.position.y + mp_.lidar_pos_y;
+//        buff_mutex_.unlock();
+//        md_.has_odom_ = true;
+//    }
 
-        md_.has_odom_ = true;
-    }
-
-    void SDFMap::cloudCallback(const sensor_msgs::LaserScanConstPtr &scan) {
+    void SDFMap::cloudOdomCallback(const sensor_msgs::LaserScanConstPtr &scan,
+                                   const nav_msgs::OdometryConstPtr& odom) {
         // 把ros中激光雷达的scan转化成点云
         laser_geometry::LaserProjection projector;
-        tf::TransformListener listener;
+
         sensor_msgs::PointCloud2 cloud;
+        ros::Time time;
+
+        cloud.header = scan->header;
         try {
-            // 将LaserScan数据转换为PointCloud2，目标坐标系为map
+            //time = scan->header.stamp + ros::Duration().fromSec(scan->ranges.size()*scan->time_increment);
+
+            if(!listener.waitForTransform("map", scan->header.frame_id, scan->header.stamp, ros::Duration(1.0))){
+                std::cout << "No laser tf!" << std::endl;
+                return;
+            }
             projector.transformLaserScanToPointCloud("map", *scan, cloud, listener);
-        }
-        catch (tf::TransformException &e) {
+
+        } catch (tf::TransformException &e) {
             ROS_ERROR("%s", e.what());
             return;
         }
@@ -339,11 +330,10 @@ Eigen::Vector3d SDFMap::closetPointInMap(const Eigen::Vector3d& pt, const Eigen:
         pcl::PointCloud<pcl::PointXYZ> latest_cloud;
         pcl::fromROSMsg(cloud, latest_cloud);
         md_.has_cloud_ = true;
-
-        if (!md_.has_odom_) {
-            // std::cout << "no odom!" << std::endl;
-            return;
-        }
+        md_.has_odom_ = true;
+        // map系下雷达坐标 也可以使用定位模块的位姿
+        md_.lidar_pos_(0) = odom->pose.pose.position.x + mp_.lidar_pos_x;
+        md_.lidar_pos_(1) = odom->pose.pose.position.y + mp_.lidar_pos_y;
 
         if (latest_cloud.points.size() == 0) return;
 
@@ -371,16 +361,15 @@ Eigen::Vector3d SDFMap::closetPointInMap(const Eigen::Vector3d& pt, const Eigen:
             pt = latest_cloud.points[i];
             p2d(0) = pt.x, p2d(1) = pt.y;
 
-            /* point inside update range */
+            // point inside update range
             Eigen::Vector2d devi = p2d - md_.lidar_pos_; // laser_link系下的点云坐标
             Eigen::Vector2i inf_pt;
 
             if (fabs(devi(0)) < mp_.local_update_range_(0) && fabs(devi(1)) < mp_.local_update_range_(1)) {
 
-                /* inflate the point */
+                // inflate the point
                 for (int x = -inf_step; x <= inf_step; ++x)
                     for (int y = -inf_step; y <= inf_step; ++y) {
-
                         p2d_inf(0) = pt.x + x * mp_.resolution_;
                         p2d_inf(1) = pt.y + y * mp_.resolution_;
 
@@ -415,6 +404,7 @@ Eigen::Vector3d SDFMap::closetPointInMap(const Eigen::Vector3d& pt, const Eigen:
         boundIndex(md_.local_bound_max_);
 
         md_.esdf_need_update_ = true;
+
     }
 
     void SDFMap::publishMap() {

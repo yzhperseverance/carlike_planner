@@ -15,6 +15,14 @@ namespace uneven_planner {
 
 
     void AlmTrajOptFlow::Run(const std::vector<Eigen::Vector3d> &init_path) {
+        if(!alm_traj_ptr_->sdf_map){
+            std::cout << "No SDF Map" << std::endl;
+            return;
+        }
+        if(!alm_traj_ptr_->sdf_map->md_.has_cloud_){
+            std::cout << "No Cloud" << std::endl;
+            return;
+        }
         init_path_.clear();
         //init_path_ = init_path;
         for(auto &point: init_path){

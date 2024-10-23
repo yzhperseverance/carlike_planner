@@ -38,6 +38,7 @@ namespace uneven_planner
             double max_kap;
             double min_cxi;
             double max_sig;
+            double dist0;
 
             /// ALM
             bool   use_scaling;

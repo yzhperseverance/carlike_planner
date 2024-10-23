@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   visualization_msgs
   message_filters
+  pcl_ros
   tf
   laser_geometry
 )

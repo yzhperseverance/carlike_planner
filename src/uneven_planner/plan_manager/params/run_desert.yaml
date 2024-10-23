@@ -13,6 +13,26 @@ manager_node:
     gravity: 9.81
     mass: 1.0
 
+  sdf_map:
+    resolution: 0.1
+    map_size_x: 40.0
+    map_size_y: 20.0
+    local_update_range_x: 5.5
+    local_update_range_y: 5.5
+    obstacles_inflation: 0.099
+    esdf_slice_height: 0.3
+    visualization_truncate_height: 2.49
+    virtual_ceil_height: 2.5
+    show_occ_time: false
+    show_esdf_time: false
+    pose_type: 1
+    frame_id: world
+    local_bound_inflate: 0.0
+    local_map_margin: 50
+    lidar_pos_x: 0.08
+    lidar_pos_y: 0.0
+
+
   kino_astar:
     yaw_resolution: 3.15
     lambda_heu: 1.0
@@ -39,6 +59,7 @@ manager_node:
     max_kap: 2.1
     min_cxi: 0.8
     max_sig: 0.05
+    dist0: 0.4
     use_scaling: true
     rho: 1.0
     beta: 1000.0

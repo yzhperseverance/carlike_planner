@@ -28,7 +28,7 @@ namespace uneven_planner
         else{
             sdf_map->initMap(nh);
             kino_astar->init(nh);
-            //traj_opt_flow->SetEnvironment(sdf_map);
+            traj_opt_flow->SetEnvironment(sdf_map);
         }
 
         traj_pub = nh.advertise<mpc_controller::SE2Traj>("traj", 1);
@@ -77,7 +77,7 @@ namespace uneven_planner
         }
         PublishPath(init_path);
         std::cout << "hybrid A* plan success!" << std::endl;
-        /*
+
         // minco optimize
         traj_opt_flow->Run(init_path);
         // visualization
@@ -119,7 +119,7 @@ namespace uneven_planner
         anglept.x = angle[0];
         traj_msg.angle_pts.push_back(anglept);
         traj_pub.publish(traj_msg);
-        */
+
         in_plan = false;
 
     }
