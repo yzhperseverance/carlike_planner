@@ -141,11 +141,11 @@ namespace uneven_planner
                 ROS_WARN("[ALM] Reach max iteration");
                 break;
             }
+
         }
         ROS_INFO_STREAM("[ALM] Time consuming: "<<(ros::Time::now()-start_time).toSec() * 1000.0 << " ms");
         ROS_INFO_STREAM("[ALM] Jerk cost: "<<minco_se2.getTrajJerkCost() << " traj time:" << minco_se2.getTraj().getTotalDuration());
 
-        
         return ret_code;
     }
 
@@ -351,7 +351,6 @@ namespace uneven_planner
                 curv_snorm = wz * wz / (vx*vx + delta_sigl);
                 sdf_map->evaluateEDTWithGrad(pos, -1.0, dist, grad_dist);
 
-
                 // non-holonomic
                 grad_v = Eigen::Vector2d(syaw, -cyaw);
                 grad_yaw = vel.dot(xb);
@@ -361,7 +360,7 @@ namespace uneven_planner
                 gdTyaw[constrain_idx](yaw_idx) += -(grad_yaw * dyaw) * yaw_idx;
                 gdTxy[constrain_idx](i) += (grad_yaw * dyaw) * (alpha+i);
                 constrain_idx++;
-                
+
                 // longitude velocity
                 grad_vx2 = 1.0;
                 grad_v = grad_vx2 * 2.0 * vel;
@@ -392,7 +391,7 @@ namespace uneven_planner
                 constrain_idx++;
 
                 // obstacle distance
-                grad_p = 2 * (dist - dist0) * grad_dist;
+                grad_p = -2.0 * dist * grad_dist;
                 gdCxy[constrain_idx].block<6, 2>(i * 6, 0) += beta0_xy * grad_p.transpose();
                 gdTxy[constrain_idx](i) += grad_p.dot(vel) * alpha;
                 constrain_idx++;
@@ -555,7 +554,7 @@ namespace uneven_planner
                 ay = lat_acc;
                 curv_snorm = wz * wz / (vx*vx + delta_sigl); // wz^2 / (vx^2 + δ)
                 sdf_map->evaluateEDTWithGrad(pos, -1.0, dist, grad_dist);
-
+                //std::cout << "dist=" << dist << ",grad_dist=" << grad_dist(0) << "," << grad_dist(1) << std::endl;
                 // hx是等式约束，gx是不等式约束
                 // non-holonomic
                 // 这里保证了xy和yaw的方向不会冲突，因为只有速度方向和yaw的方向一致这项才会趋于0
@@ -569,7 +568,8 @@ namespace uneven_planner
                 grad_yaw += nonh_grad * vel.dot(xb);
                 equal_idx++;
                 constrain_idx++;
-                
+
+
                 // longitude velocity
                 double v_mu = mu[non_equal_idx];
                 gx[non_equal_idx] = (vx*vx - max_vel*max_vel) * scale_cx(constrain_idx);
@@ -620,13 +620,13 @@ namespace uneven_planner
 
                 // obstacle distance
                 double dist_mu = mu[non_equal_idx];
-                gx[non_equal_idx] = pow(dist - dist0, 2) * scale_cx(constrain_idx);
+                gx[non_equal_idx] = (dist0*dist0 - dist*dist) * scale_cx(constrain_idx);
 
                 if (rho * gx[non_equal_idx] + dist_mu > 0)
                 {
                     cost += getAugmentedCost(gx[non_equal_idx], dist_mu);
                     aug_grad = getAugmentedGrad(gx[non_equal_idx], dist_mu) * scale_cx(constrain_idx);
-                    grad_p += aug_grad * 2.0 * (dist - dist0) * grad_dist;
+                    grad_p += -aug_grad * 2.0 * dist * grad_dist;
                 }
                 else
                 {
@@ -663,7 +663,7 @@ namespace uneven_planner
 
                 // process with vx, wz, ax
                 grad_v += grad_vx2 * 2.0 * vel; //  把vx2的导数传给v
-
+                //std::cout << "grad_v=" << grad_v(0) << "," << grad_v(1) << std::endl;
                 grad_dyaw += grad_wz;
 
                 grad_a += grad_ax * xb;

@@ -142,8 +142,10 @@ namespace uneven_planner
         // mu = mu + ρ * gx
         // ρ是二次惩罚项的系数
         lambda += rho * hx;
-        for(int i = 0; i < non_equal_num; i++)
+        for(int i = 0; i < non_equal_num; i++){
             mu(i) = std::max(mu(i)+rho*gx(i), 0.0);
+        }
+
         rho = std::min((1 + gamma) * rho, beta);
     }
 

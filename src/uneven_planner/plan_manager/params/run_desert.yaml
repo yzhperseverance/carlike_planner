@@ -46,17 +46,17 @@ manager_node:
     collision_interval: 0.06
     oneshot_range: 1.0
     wheel_base: 0.26
-    max_steer: 0.5
+    max_steer: 0.4
     max_vel: 0.5
     in_test: false
 
   alm_traj_opt:
     rho_T: 100000.0
     rho_ter: 10.0
-    max_vel: 0.5
+    max_vel: 1.0
     max_acc_lon: 5.0
     max_acc_lat: 10.0
-    max_kap: 2.1
+    max_kap: 2.0
     min_cxi: 0.8
     max_sig: 0.05
     dist0: 0.4
@@ -82,7 +82,6 @@ manager_node:
     init_time_times: 1.2
     yaw_piece_times: 2.0
     init_sig_vel: 0.05
-    is_uneven: false
     has_global_map: true
 
 mpc:

@@ -9,7 +9,6 @@ namespace uneven_planner
         nh.getParam("manager/init_time_times", init_time_times);
         nh.getParam("manager/yaw_piece_times", yaw_piece_times);
         nh.getParam("manager/init_sig_vel", init_sig_vel);
-        nh.getParam("manager/is_uneven", is_uneven);
         nh.getParam("manager/has_global_map", has_global_map);
         nh.param<string>("manager/bk_dir", bk_dir, "xxx");
 
@@ -19,17 +18,10 @@ namespace uneven_planner
         traj_opt_flow.reset(new AlmTrajOptFlow(nh));
         global_map.reset(new GlobalMap());
 
-        if(is_uneven){
-            uneven_map->init(nh);
-            kino_astar->init(nh);
-            kino_astar->setEnvironment(uneven_map);
-            traj_opt_flow->SetEnvironment(uneven_map);
-        }
-        else{
-            sdf_map->initMap(nh);
-            kino_astar->init(nh);
-            traj_opt_flow->SetEnvironment(sdf_map);
-        }
+        sdf_map->initMap(nh);
+        kino_astar->init(nh);
+        traj_opt_flow->SetEnvironment(sdf_map);
+
 
         traj_pub = nh.advertise<mpc_controller::SE2Traj>("traj", 1);
         global_map_sub = nh.subscribe("/global_costmap/costmap/costmap", 1, &PlanManager::rcvGlobalMapCallBack, this);
@@ -80,9 +72,10 @@ namespace uneven_planner
 
         // minco optimize
         traj_opt_flow->Run(init_path);
+
+
         // visualization
         SE2Trajectory back_end_traj = traj_opt_flow->GetTraj();
-
         // publish to mpc controller
         mpc_controller::SE2Traj traj_msg;
         traj_msg.start_time = ros::Time::now();
@@ -142,4 +135,5 @@ namespace uneven_planner
 
         path_pub_.publish(nav_path);
     }
+
 }

@@ -33,7 +33,7 @@ namespace uneven_planner {
         node_ = nh;
 
         /* get parameter */
-        double x_size, y_size, z_size;
+        double x_size, y_size;
         node_.param("sdf_map/resolution", mp_.resolution_, -1.0);
         node_.param("sdf_map/map_size_x", x_size, -1.0);
         node_.param("sdf_map/map_size_y", y_size, -1.0);
@@ -507,7 +507,7 @@ namespace uneven_planner {
 
         posToIndex(pos_m, idx);
         indexToPos(idx, idx_pos);
-        // 当前位置与其对应的地图索引位置之间的差异
+        // 当前位置与栅格中心位置之间的差
         diff = (pos - idx_pos) * mp_.resolution_inv_;
 
         for (int x = 0; x < 2; x++) {
@@ -537,12 +537,12 @@ namespace uneven_planner {
         double v0 = (1 - diff(0)) * values[0][0] + diff(0) * values[1][0]; // Interpolate along x for y=0
         double v1 = (1 - diff(0)) * values[0][1] + diff(0) * values[1][1]; // Interpolate along x for y=1
         value = (1 - diff(1)) * v0 + diff(1) * v1; // Final interpolation along y
-
         // Calculate gradients
         grad(0) = (values[1][0] - values[0][0]) * mp_.resolution_inv_; // Gradient in x
         grad(1) = (values[0][1] - values[0][0]) * (1 - diff(0)) +
                   (values[1][1] - values[1][0]) * diff(0); // Gradient in y
-        grad *= mp_.resolution_inv_; // Scale gradients by resolution_inv
+
+        grad(1) *= mp_.resolution_inv_; // Scale gradients by resolution_inv
     }
 
     void SDFMap::evaluateEDTWithGrad(const Eigen::Vector2d &pos,

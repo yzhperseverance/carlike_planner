@@ -27,7 +27,6 @@ namespace uneven_planner
             double init_time_times;
             double yaw_piece_times;
             double init_sig_vel;
-            bool is_uneven;
             bool has_global_map;
             Eigen::Vector3d odom_pos;
             string bk_dir;
