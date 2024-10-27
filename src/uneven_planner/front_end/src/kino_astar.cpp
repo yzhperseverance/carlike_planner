@@ -68,6 +68,7 @@ namespace uneven_planner
 
         if (global_map->isOccupancy(start_state.head(2)))
         {
+            std::cout << "start_state=" << start_state <<std::endl;
             ROS_ERROR("start is not free!!!");
             return front_end_path;
         }

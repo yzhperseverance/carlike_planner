@@ -1,0 +1,96 @@
+<launch>
+  <arg name="odom_topic" value="/odom" />
+  <arg name="cmd_topic" value="/cmd_vel" />
+  <arg name="traj_topic" value="/ugv/trajectory" />
+  <arg name="cloud_topic" value="/scan" />
+  <arg name="x_pos" value="0.0"/>
+  <arg name="y_pos" value="0.0"/>
+  <arg name="z_pos" value="0.0"/>
+
+  <arg name="paused" default="false"/>
+  <arg name="use_sim_time" value="true"/>
+  <arg name="gui" default="true"/>
+  <arg name="headless" default="false"/>
+  <arg name="debug" default="false"/>
+
+  <node pkg="tf" type="static_transform_publisher"
+        name="world_to_map"
+        args="0 0 0 0 0 0 1  /world /map 100" />
+  <node pkg="tf" type="static_transform_publisher"
+        name="map_to_odom"
+        args="0 0 0 0 0 0 1  /map /odom 100" />
+
+  <rosparam command="load" file="$(find plan_manager)/params/run_minco.yaml" />
+
+
+  <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find simulate)/car_model/racecar.urdf.xacro'"/>
+
+  <!--模型车的起点放置位置-->
+
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="debug" value="$(arg debug)" />
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+    <arg name="headless" value="$(arg headless)"/>
+    <arg name="world_name" value="$(find simulate)/worlds/robocup_home.world"/>
+    <!-- .world文件的地址-->
+  </include>
+
+  <!-- 在gazebo中加载机器人模型 -->
+  <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
+        args="-urdf -model racecar -param robot_description -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos)"/>
+
+  <!-- 从yaml文件加载联合控制器的参数 -->
+  <rosparam file="$(find simulate)/config/ctrl.yaml" command="load"/>
+  <!-- 加载控制器 spawner -->
+  <node name="controller_manager" pkg="controller_manager" type="spawner"
+        respawn="false" output="screen" ns="/racecar"
+        args="left_rear_wheel_velocity_controller       right_rear_wheel_velocity_controller
+	            left_front_wheel_velocity_controller      right_front_wheel_velocity_controller
+	            left_steering_hinge_position_controller   right_steering_hinge_position_controller
+	            joint_state_controller"/>
+
+
+  <!--    <node pkg="joint_state_publisher" type="joint_state_publisher" name="joint_state_publisher"/>-->
+  <!-- 发布tf变换 -->
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
+    <param name="publish_frequency" type="double" value="20.0" />
+    <remap from="/joint_states" to="/racecar/joint_states"/>
+  </node>
+
+  <!-- amcl map->odom-->
+<!--  <include file="$(find simulate)/launch/robot_amcl.launch.xml" />-->
+
+  <!-- rviz -->
+
+  <node pkg="map_server" type="map_server" name="map_server" args="$(find simulate)/maps/robocup_home.yaml"/>
+  <node name="global_costmap" pkg="costmap_2d" type="costmap_2d_node" output="screen">
+    <rosparam file="$(find simulate)/param/global_costmap_params.yaml" command="load"/>
+    <rosparam file="$(find simulate)/param/costmap_common_params.yaml" command="load" ns="costmap"/>
+  </node>
+
+  <node pkg="plan_manager" name="manager_node" type="manager_node" output="screen">
+    <!--    <param name="uneven_map/map_pcd" type="string" value="$(find uneven_map)/maps/$(arg map_name).pcd" />-->
+    <!--    <param name="uneven_map/map_file" type="string" value="$(find uneven_map)/maps/$(arg map_name).map" />-->
+    <remap from ="~cmd" to="$(arg cmd_topic)"/>
+    <remap from="~odom" to="$(arg odom_topic)"/>
+    <remap from="~traj" to="$(arg traj_topic)"/>
+    <remap from="~cloud" to="$(arg cloud_topic)"/>
+  </node>
+
+  <node pkg="mpc_controller" name="mpc_controller_node" type="mpc_controller_node" output="screen">
+    <remap from="cmd" to="$(arg cmd_topic)"/>
+    <remap from="odom" to="$(arg odom_topic)"/>
+    <remap from="traj" to="$(arg traj_topic)"/>
+  </node>
+
+  <node pkg="simulate" type="gazebo_odometry.py" name="gazebo_odometry_node" />
+  <node pkg="simulate" type="servo_commands.py" name="servo_commands" />
+  <!--    把导航的/cmd_vel信息转换到阿克曼小车的轮速和转角上-->
+  <node pkg="simulate" type="nav_sim.py" name="nav_sim"/>
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find plan_manager)/rviz/default.rviz" required="true" />
+
+</launch>
