@@ -20,6 +20,7 @@
 #include <tf/tf.h>
 
 #include <ompl/base/spaces/DubinsStateSpace.h>
+#include <ompl/base/spaces/ReedsSheppStateSpace.h>
 #include <ompl/geometric/SimpleSetup.h>
 
 #include "plan_env/edt_environment.h"

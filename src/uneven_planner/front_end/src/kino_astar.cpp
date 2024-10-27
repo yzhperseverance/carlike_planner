@@ -29,7 +29,7 @@ namespace uneven_planner
 
         yaw_resolution_inv = 1.0 / yaw_resolution;
 
-        shot_finder = std::make_shared<ompl::base::DubinsStateSpace>(wheel_base / tan(max_steer));
+        shot_finder = std::make_shared<ompl::base::ReedsSheppStateSpace>(wheel_base / tan(max_steer));
 
         model.type = visualization_msgs::Marker::LINE_LIST;
         model.header.frame_id = "world";
