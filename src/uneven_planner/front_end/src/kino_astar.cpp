@@ -99,8 +99,6 @@ namespace uneven_planner
         {
 
             cur_node = open_set.top();
-
-            //std::cout << "cur_node=" << cur_node << std::endl;
             if((cur_node->state.head(2) - end_pt.head(2)).norm() < oneshot_range)
             {
                 ros::Time t1 = ros::Time::now();
@@ -108,7 +106,7 @@ namespace uneven_planner
                 if (!shot_path.empty())
                 {
                     std::cout << "one-shot time: " << (ros::Time::now()-t1).toSec()*1000 << " ms"<<std::endl;
-                    std::cout << "front all time: " << (ros::Time::now()-t0).toSec()*1000 << " ms"<<std::endl;
+                    ROS_INFO_STREAM("[Hybrid A*] Time consuming: "<<(ros::Time::now()-t0).toSec() * 1000.0 << " ms");
                     retrievePath(cur_node);
                     visFrontEnd();
                     return front_end_path;
@@ -125,12 +123,7 @@ namespace uneven_planner
 
             for (double steer = -max_steer; steer <= max_steer + 1e-3; steer += 0.5*max_steer)
             {
-                for (double v = -max_vel; v < 0; v += 0.5*max_vel)
-                {
-                    ctrl_input << v, steer;
-                    inputs.push_back(ctrl_input);
-                }
-                for (double v = max_vel + 1e-3; v > 0; v -= 0.5*max_vel)
+                for (double v = -max_vel; v <= max_vel + 1e-3; v += 0.5*max_vel)
                 {
                     ctrl_input << v, steer;
                     inputs.push_back(ctrl_input);

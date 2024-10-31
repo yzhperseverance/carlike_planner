@@ -34,6 +34,8 @@ namespace uneven_planner {
 
         void PublishSE3Traj(const SE2Trajectory& traj);
 
+        void visualizeYaw(const SE2Trajectory& traj);
+
     private:
         std::shared_ptr<ALMTrajOpt> alm_traj_ptr_;
 
@@ -41,6 +43,7 @@ namespace uneven_planner {
 
         ros::Publisher se2_pub;
         ros::Publisher se3_pub;
+        ros::Publisher yaw_pub;
 
         double max_vel_;
 

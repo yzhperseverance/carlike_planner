@@ -45,7 +45,7 @@ manager_node:
     time_interval: 0.3
     collision_interval: 0.06
     oneshot_range: 1.0
-    wheel_base: 0.26
+    wheel_base: 0.258
     max_steer: 0.4
     max_vel: 0.5
     in_test: false
@@ -53,10 +53,10 @@ manager_node:
   alm_traj_opt:
     rho_T: 100000.0
     rho_ter: 10.0
-    max_vel: 1.0
+    max_vel: 3.0
     max_acc_lon: 5.0
     max_acc_lat: 10.0
-    max_kap: 2.0
+    max_kap: 2.1
     min_cxi: 0.8
     max_sig: 0.05
     dist0: 0.4
@@ -92,15 +92,15 @@ mpc:
   delay_num: 0
   max_omega: 24.0
   max_domega: 10.0
-  max_speed: 0.8
-  min_speed: -0.8
-  max_accel: 10.0
+  max_speed: 1.0
+  min_speed: -1.0
+  max_accel: 5.0
   test_mpc: false
   bk_mode: false
   matrix_q: [100.0, 100.0, 2.0]
   matrix_r: [0.01, 0.01]
   matrix_rd: [0.01, 100.0]
-  max_steer: 0.505
+  max_steer: 0.7854
   max_dsteer: 1.5
-  wheel_base: 0.26
-  model_type: 2 
+  wheel_base: 0.258
+  model_type: 2 # 类车模型

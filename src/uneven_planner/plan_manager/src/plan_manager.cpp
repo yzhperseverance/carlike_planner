@@ -60,8 +60,9 @@ namespace uneven_planner
                                   msg.pose.position.y, \
                                   atan2(2.0*msg.pose.orientation.z*msg.pose.orientation.w, \
                                         2.0*pow(msg.pose.orientation.w, 2)-1.0)             );
-        
+        std::cout << "---------------hybrid A* Start--------------" << std::endl;
         std::vector<Eigen::Vector3d> init_path = kino_astar->Plan(odom_pos, end_state);
+        std::cout << "---------------hybrid A* End--------------" << std::endl;
         if (init_path.empty())
         {
             in_plan = false;
@@ -70,9 +71,11 @@ namespace uneven_planner
         PublishPath(init_path);
         std::cout << "hybrid A* plan success!" << std::endl;
 
+
+        std::cout << "-------------------ALM Start------------------" << std::endl;
         // minco optimize
         traj_opt_flow->Run(init_path);
-
+        std::cout << "--------------------ALM End-------------------" << std::endl;
 
         // visualization
         SE2Trajectory back_end_traj = traj_opt_flow->GetTraj();

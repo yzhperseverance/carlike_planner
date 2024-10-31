@@ -8,7 +8,7 @@ namespace uneven_planner {
         alm_traj_ptr_ = std::make_shared<ALMTrajOpt>(nh);
         se2_pub = nh.advertise<nav_msgs::Path>("/alm/se2_path", 1);
         se3_pub = nh.advertise<nav_msgs::Path>("/alm/se3_path", 1);
-
+        yaw_pub = nh.advertise<visualization_msgs::MarkerArray>("/alm/yaw_path", 1);
         nh.getParam("alm_traj_opt/max_vel", max_vel_);
 
     }
@@ -49,11 +49,12 @@ namespace uneven_planner {
         end_xy.col(1) << 0.05 * cos(end_yaw(0)), 0.05 * sin(end_yaw(0));
 
         GetInnerPoint(inner_xy, inner_yaw, total_time);
-        std::cout << "-------------------ALM Start------------------" << std::endl;
+
         alm_traj_ptr_->optimizeSE2Traj(init_xy, end_xy, inner_xy, \
                     init_yaw, end_yaw, inner_yaw, total_time);
         SE2Trajectory back_end_traj = alm_traj_ptr_->getTraj();
         PublishSE2Traj(back_end_traj);
+        //visualizeYaw(back_end_traj);
         //PublishSE3Traj(back_end_traj);
     }
 
@@ -88,7 +89,7 @@ namespace uneven_planner {
             temp_len_yaw += temp_seg;
             temp_len_pos += temp_seg;
             total_len += temp_seg;
-            // 这里不应该是while吗？
+
             if (temp_len_yaw > piece_len_yaw) {
                 double temp_yaw = init_path_[k].z() + (1.0 - (temp_len_yaw - piece_len_yaw) / temp_seg) *
                                                       (init_path_[k + 1] - init_path_[k]).z();
@@ -104,7 +105,7 @@ namespace uneven_planner {
                 temp_len_pos -= piece_len;
             }
         }
-        // 这tm明显计算的有问题啊，太逆天了，纯是工程trick
+
         total_time = total_len / max_vel_ * 1.2;
         inner_xy.resize(2, inner_xy_node.size());
         inner_yaw.resize(inner_yaw_node.size());
@@ -192,4 +193,45 @@ namespace uneven_planner {
         se3_pub.publish(back_end_path);
     }
 
+    void AlmTrajOptFlow::visualizeYaw(const SE2Trajectory& traj) {
+        visualization_msgs::MarkerArray marker_array;
+
+
+        geometry_msgs::PoseStamped p;
+        int id = 0;
+        for (double t=0.0; t < traj.getTotalDuration(); t+=0.2)
+        {
+            visualization_msgs::Marker marker;
+            marker.header.frame_id = "world";
+            marker.header.stamp = ros::Time::now();
+            marker.ns = "path_yaw";
+            marker.id = id++;
+            marker.type = visualization_msgs::Marker::ARROW;
+            marker.action = visualization_msgs::Marker::ADD;
+            marker.scale.x = 0.1;  // 箭头长度
+            marker.scale.y = 0.1;  // 箭头宽度
+            marker.color.r = 1.0;
+            marker.color.g = 0.0;
+            marker.color.b = 0.0;
+            marker.color.a = 1.0;
+
+            Eigen::Vector2d pos = traj.getPos(t);
+
+            double yaw = traj.getAngle(t);
+            p.pose.position.x = pos(0);
+            p.pose.position.y = pos(1);
+            p.pose.position.z = 0.0;
+            p.pose.orientation.w = cos(yaw/2.0);
+            p.pose.orientation.x = 0.0;
+            p.pose.orientation.y = 0.0;
+            p.pose.orientation.z = sin(yaw/2.0);
+
+            marker.pose.position = p.pose.position;
+            marker.pose.orientation = p.pose.orientation;
+
+            marker_array.markers.push_back(marker);  // 将marker添加到MarkerArray中
+
+        }
+        yaw_pub.publish(marker_array);
+    }
 }

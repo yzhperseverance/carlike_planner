@@ -19,6 +19,9 @@
   <node pkg="tf" type="static_transform_publisher"
         name="map_to_odom"
         args="0 0 0 0 0 0 1  /map /odom 100" />
+  <!-- amcl map->odom-->
+<!--  <include file="$(find simulate)/launch/robot_amcl.launch.xml" />-->
+
 
   <rosparam command="load" file="$(find plan_manager)/params/run_minco.yaml" />
 
@@ -60,8 +63,7 @@
     <remap from="/joint_states" to="/racecar/joint_states"/>
   </node>
 
-  <!-- amcl map->odom-->
-<!--  <include file="$(find simulate)/launch/robot_amcl.launch.xml" />-->
+
 
   <!-- rviz -->
 

@@ -720,7 +720,172 @@ void MPC::solveMPCAcker(void)
     linearMatrix.resize(nc, nx);
     for (int i=0; i<mx; i+=2)
     {
-        lowerBound[i] = min_speed;
+        lowerBound[i] =void MPC::solveMPCAcker(void)
+{
+    const int dimx = 3 * (T - delay_num);
+    const int dimu = 2 * (T - delay_num);
+    const int nx = dimx + dimu;
+
+    Eigen::SparseMatrix<double> hessian;
+    Eigen::VectorXd gradient = Eigen::VectorXd::Zero(nx);
+    Eigen::SparseMatrix<double> linearMatrix;
+    Eigen::VectorXd lowerBound;
+    Eigen::VectorXd upperBound;
+
+    // first-order
+    for (int i=0, j=delay_num, k=0; i<dimx; i+=3, j++, k+=2)
+    {
+        gradient[i] = -2 * Q[0] * xref(0, j);
+        gradient[i+1] = -2 * Q[1] * xref(1, j);
+        gradient[i+2] = -2 * Q[2] * xref(2, j);
+        gradient[dimx+k] = -2 * Q[2] * dref(0, j);
+    }
+
+    // second-order
+    const int nnzQ = nx + dimu - 2;
+    int irowQ[nnzQ];
+    int jcolQ[nnzQ];
+    double dQ[nnzQ];
+    for (int i=0; i<nx; i++)
+    {
+        irowQ[i] = jcolQ[i] = i;
+    }
+    for (int i=nx; i<nnzQ; i++)
+    {
+        irowQ[i] = i - dimu + 2;
+        jcolQ[i] = i - dimu;
+    }
+    for (int i=0; i<dimx; i+=3)
+    {
+        dQ[i] = Q[0] * 2.0;
+        dQ[i+1] = Q[1] * 2.0;
+        dQ[i+2] = Q[2] * 2.0;
+    }
+    dQ[dimx] = dQ[nx-2] = (R[0] + Rd[0] + Q[2]) * 2.0;
+    dQ[dimx + 1] = dQ[nx-1] = (R[1] + Rd[1]) * 2.0;
+    for (int i=dimx+2; i<nx-2; i+=2)
+    {
+        dQ[i] = 2 * (R[0] + 2 * Rd[0] + Q[2]);
+        dQ[i+1] = 2 * (R[1] + 2 * Rd[1]);
+    }
+    for (int i=nx; i<nnzQ; i+=2)
+    {
+        dQ[i] = -Rd[0] * 2.0;
+        dQ[i+1] = -Rd[1] * 2.0;
+    }
+    hessian.resize(nx, nx);
+    Eigen::MatrixXd QQ(nx, nx);
+    for (int i=0; i<nx; i++)
+    {
+        hessian.insert(irowQ[i], jcolQ[i]) = dQ[i];
+    }
+    for (int i=nx; i<nnzQ; i++)
+    {
+        hessian.insert(irowQ[i], jcolQ[i]) = dQ[i];
+        hessian.insert(jcolQ[i], irowQ[i]) = dQ[i];
+    }
+
+    // equality constraints
+    MPCNode temp = xbar[delay_num];
+    getLinearModel(temp);
+    int my = dimx;
+    double b[my];
+    const int nnzA = 12 * (T-delay_num) - 5;
+    int irowA[nnzA];
+    int jcolA[nnzA];
+    double dA[nnzA];
+    Eigen::Vector3d temp_vec(temp.first.x, temp.first.y, temp.first.theta);
+    Eigen::Vector3d temp_b = A*temp_vec + C;
+
+    for (int i=0; i<dimx; i++)
+    {
+        irowA[i] = jcolA[i] = i;
+        dA[i] = 1;
+    }
+    b[0] = temp_b[0];
+    b[1] = temp_b[1];
+    b[2] = temp_b[2];
+    irowA[dimx] = 0;
+    jcolA[dimx] = dimx;
+    dA[dimx] = -B(0, 0);
+    irowA[dimx+1] = 1;
+    jcolA[dimx+1] = dimx;
+    dA[dimx+1] = -B(1, 0);
+    irowA[dimx+2] = 2;
+    jcolA[dimx+2] = dimx;
+    dA[dimx+2] = -B(2, 0);
+    irowA[dimx+3] = 2;
+    jcolA[dimx+3] = dimx+1;
+    dA[dimx+3] = -B(2, 1);
+    int ABidx = 9*(T-delay_num) - 9;
+    int ABbegin = dimx+4;
+    for (int i=0, j=1; i<ABidx; i+=9, j++)
+    {
+        getLinearModel(xbar[j+delay_num]);
+        for (int k=0; k<3; k++)
+        {
+            b[3*j+k] = C[k];
+            irowA[ABbegin + i + k] = 3*j + k;
+            jcolA[ABbegin + i + k] = irowA[ABbegin + i + k] - 3;
+            dA[ABbegin + i + k] = -A(k, k);
+        }
+        irowA[ABbegin + i + 3] = 3*j;
+        jcolA[ABbegin + i + 3] = 3*j - 1;
+        dA[ABbegin + i + 3] = -A(0, 2);
+
+        irowA[ABbegin + i + 4] = 3*j + 1;
+        jcolA[ABbegin + i + 4] = 3*j - 1;
+        dA[ABbegin + i + 4] = -A(1, 2);
+
+        irowA[ABbegin + i + 5] = 3*j;
+        jcolA[ABbegin + i + 5] = dimx + 2*j;
+        dA[ABbegin + i + 5] = -B(0, 0);
+
+        irowA[ABbegin + i + 6] = 3*j + 1;
+        jcolA[ABbegin + i + 6] = dimx + 2*j;
+        dA[ABbegin + i + 6] = -B(1, 0);
+
+        irowA[ABbegin + i + 7] = 3*j + 2;
+        jcolA[ABbegin + i + 7] = dimx + 2*j;
+        dA[ABbegin + i + 7] = -B(2, 0);
+
+        irowA[ABbegin + i + 8] = 3*j + 2;
+        jcolA[ABbegin + i + 8] = dimx + 2*j + 1;
+        dA[ABbegin + i + 8] = -B(2, 1);
+    }
+
+    // iequality constraints
+    const int mz  = 2 * (T-delay_num) - 2;
+    const int nnzC = 2 * dimu - 4;
+    int   irowC[nnzC];
+    int   jcolC[nnzC];
+    double   dC[nnzC];
+    for (int i=0, k=0; i<mz; i+=2, k+=4)
+    {
+        irowC[k] = i;
+        jcolC[k] = dimx  + i;
+        dC[k] = -1.0;
+
+        irowC[k+1] = i;
+        jcolC[k+1] = jcolC[k] +2;
+        dC[k+1] = 1.0;
+
+        irowC[k+2] = i + 1;
+        jcolC[k+2] = dimx + 1 + i;
+        dC[k+2] = -1.0;
+
+        irowC[k+3] = i + 1;
+        jcolC[k+3] = jcolC[k+2] +2;
+        dC[k+3] = 1.0;
+    }
+
+    // xlimits and all
+    int mx = dimu;
+    int nc = mx+my+mz;
+    lowerBound.resize(nc);
+    upperBound.resize(nc);
+    linearMatrix.resize(nc, nx);
+    for (int i=0; i<mx; min_speed;
         lowerBound[i+1] = -max_steer;
         upperBound[i] = max_speed;
         upperBound[i+1] = max_steer;

@@ -441,7 +441,6 @@ namespace uneven_planner
         gdPyaw_fx.resize(piece_yaw-1, 1);
         scale_fx = 1.0 / max(1.0, max(max(gdPxy_fx.lpNorm<Eigen::Infinity>(), \
                                       gdPyaw_fx.lpNorm<Eigen::Infinity>()), fabs(gdTau_fx)));
-        std::cout<<"scale_fx="<<scale_fx<<std::endl;
         for (int i=0; i<equal_num+non_equal_num; i++)
         {
             gdPxy[i].resize((piece_xy-1)*2, 1);
@@ -562,7 +561,6 @@ namespace uneven_planner
                 Eigen::Vector2d non_holonomic_yaw(syaw, -cyaw);
                 hx[equal_idx] = vel.dot(non_holonomic_yaw) * scale_cx(constrain_idx);
                 cost += getAugmentedCost(hx[equal_idx], nonh_lambda);
-
                 double nonh_grad = getAugmentedGrad(hx[equal_idx], nonh_lambda) * scale_cx(constrain_idx);
                 grad_v += nonh_grad * non_holonomic_yaw;
                 grad_yaw += nonh_grad * vel.dot(xb);
@@ -622,7 +620,7 @@ namespace uneven_planner
                 double dist_mu = mu[non_equal_idx];
                 gx[non_equal_idx] = (dist0*dist0 - dist*dist) * scale_cx(constrain_idx);
 
-                if (rho * gx[non_equal_idx] + dist_mu > 0)
+                if (rho * gx[non_equal_idx] + dist_mu > 0 && dist < dist0)
                 {
                     cost += getAugmentedCost(gx[non_equal_idx], dist_mu);
                     aug_grad = getAugmentedGrad(gx[non_equal_idx], dist_mu) * scale_cx(constrain_idx);
