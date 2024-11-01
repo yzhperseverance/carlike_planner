@@ -99,7 +99,7 @@
             void clear() { data_.clear(); }
     };
 
-namespace uneven_planner
+namespace carlike_planner
 {
     class KinoAstar
     {

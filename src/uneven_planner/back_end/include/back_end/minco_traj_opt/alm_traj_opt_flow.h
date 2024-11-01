@@ -9,7 +9,7 @@
 #include "back_end/minco_traj_opt/alm_traj_opt.h"
 #include "utils/se2traj.hpp"
 #include <plan_env/edt_environment.h>
-namespace uneven_planner {
+namespace carlike_planner {
 
     class AlmTrajOptFlow {
     public:

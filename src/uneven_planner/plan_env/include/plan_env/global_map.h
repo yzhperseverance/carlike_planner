@@ -8,7 +8,7 @@
 #include <ros/ros.h>
 #include <nav_msgs/OccupancyGrid.h>
 
-namespace uneven_planner {
+namespace carlike_planner {
 
     class GlobalMap {
     public:

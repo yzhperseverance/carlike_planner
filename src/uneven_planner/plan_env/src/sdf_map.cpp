@@ -27,7 +27,7 @@
 
 // #define current_img_ md_.depth_image_[image_cnt_ & 1]
 // #define last_img_ md_.depth_image_[!(image_cnt_ & 1)]
-namespace uneven_planner {
+namespace carlike_planner {
 
     void SDFMap::initMap(ros::NodeHandle &nh) {
         node_ = nh;

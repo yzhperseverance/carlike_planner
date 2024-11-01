@@ -1,6 +1,6 @@
 #include <kino_astar.h>
 
-namespace uneven_planner
+namespace carlike_planner
 {
     void KinoAstar::init(ros::NodeHandle& nh)
     {

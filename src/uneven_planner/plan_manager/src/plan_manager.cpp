@@ -1,6 +1,6 @@
 #include "plan_manager/plan_manager.h"
 
-namespace uneven_planner
+namespace carlike_planner
 {
     void PlanManager::init(ros::NodeHandle& nh)
     {

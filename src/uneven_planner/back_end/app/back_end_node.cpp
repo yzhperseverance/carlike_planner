@@ -1,7 +1,7 @@
 #include "back_end/minco_traj_opt/alm_traj_opt.h"
 #include <ros/ros.h>
 
-using namespace uneven_planner;
+using namespace carlike_planner;
 
 int main( int argc, char * argv[] )
 { 

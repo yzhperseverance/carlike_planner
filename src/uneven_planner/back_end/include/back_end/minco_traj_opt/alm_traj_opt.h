@@ -10,7 +10,7 @@
 #include "utils/lbfgs.hpp"
 #include "plan_env/edt_environment.h"
 
-namespace uneven_planner
+namespace carlike_planner
 {
     constexpr double delta_sigl = 0.01;
     constexpr double cur_scale = 10.0;

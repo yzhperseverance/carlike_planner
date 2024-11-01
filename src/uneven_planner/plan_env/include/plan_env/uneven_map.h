@@ -29,7 +29,7 @@
 
 using namespace std;
 
-namespace uneven_planner
+namespace carlike_planner
 {
     struct RXS2
     {

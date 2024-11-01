@@ -15,7 +15,7 @@
 
 
 // MINCO with s = 3
-namespace uneven_planner
+namespace carlike_planner
 {
     constexpr double PI = 3.1415926;
     constexpr double delta_v = 0.01;

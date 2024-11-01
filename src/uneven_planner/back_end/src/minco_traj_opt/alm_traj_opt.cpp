@@ -1,6 +1,6 @@
 #include "back_end/minco_traj_opt/alm_traj_opt.h"
 
-namespace uneven_planner
+namespace carlike_planner
 {
     ALMTrajOpt::ALMTrajOpt(ros::NodeHandle &nh)
     {

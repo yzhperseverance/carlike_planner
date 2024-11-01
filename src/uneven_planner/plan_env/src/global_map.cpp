@@ -2,7 +2,7 @@
 // Created by yzh on 24-10-17.
 //
 #include "plan_env/global_map.h"
-namespace uneven_planner{
+namespace carlike_planner{
 
     void GlobalMap::init(const nav_msgs::OccupancyGridPtr &map) {
         global_map = map;

@@ -58,7 +58,7 @@
 #define logit(x) (log((x) / (1 - (x))))
 using namespace std;
 
-namespace uneven_planner {
+namespace carlike_planner {
 
 // voxel hashing
     template<typename T>
