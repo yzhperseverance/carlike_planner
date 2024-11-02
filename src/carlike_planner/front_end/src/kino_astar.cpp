@@ -15,6 +15,7 @@ namespace carlike_planner
         nh.param("kino_astar/time_interval", time_interval, 1.0);
         nh.param("kino_astar/collision_interval", collision_interval, 1.0);
         nh.param("kino_astar/oneshot_range", oneshot_range, 1.0);
+        nh.param("kino_astar/horizon", horizon, 1.0);
         nh.param("kino_astar/wheel_base", wheel_base, 1.0);
         nh.param("kino_astar/max_steer", max_steer, 1.0);
         nh.param("kino_astar/max_vel", max_vel, 1.0);
@@ -112,7 +113,17 @@ namespace carlike_planner
                     return front_end_path;
                 }
             }
-
+//            bool reach_horizon = (cur_node->state.head(2) - start_state.head(2)).norm() >= horizon;
+//            if(reach_horizon){
+//                while (cur_node->parent != NULL)
+//                {
+//                    cur_node = cur_node->parent;
+//                    front_end_path.push_back(cur_node->state);
+//                }
+//                reverse(front_end_path.begin(), front_end_path.end());
+//                ROS_INFO_STREAM("[Hybrid A*] Time consuming: "<<(ros::Time::now()-t0).toSec() * 1000.0 << " ms");
+//                return front_end_path;
+//            }
             open_set.pop();
             cur_node->node_state = CLOSE;
             iter_num += 1;

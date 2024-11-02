@@ -23,11 +23,8 @@ namespace carlike_planner {
             std::cout << "No Cloud" << std::endl;
             return;
         }
-        init_path_.clear();
-        //init_path_ = init_path;
-        for(auto &point: init_path){
-            init_path_.push_back(point);
-        }
+
+        GetLocalInitPath(init_path);
         SmoothYaw();
         // init solution
         Eigen::Matrix<double, 2, 3> init_xy, end_xy;
@@ -74,6 +71,14 @@ namespace carlike_planner {
 
     }
 
+    void AlmTrajOptFlow::GetLocalInitPath(const std::vector<Eigen::Vector3d> &init_path){
+        init_path_.clear();
+        for(auto &point: init_path){
+            Eigen::Vector2d pos = point.head(2);
+            if(!alm_traj_ptr_->sdf_map->isInMap(pos)) break;
+            init_path_.push_back(point);
+        }
+    }
     void AlmTrajOptFlow::GetInnerPoint(Eigen::MatrixXd &inner_xy, Eigen::VectorXd &inner_yaw, double &total_time) {
         double temp_len_yaw = 0.0;
         double temp_len_pos = 0.0;

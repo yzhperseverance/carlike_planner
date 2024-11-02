@@ -24,6 +24,7 @@ namespace carlike_planner {
         inline void SetEnvironment(const UnevenMap::Ptr& env) { alm_traj_ptr_->setEnvironment(env); }
 
         inline SE2Trajectory GetTraj() { return alm_traj_ptr_->getTraj(); }
+
     private:
 
         void SmoothYaw();
@@ -35,6 +36,8 @@ namespace carlike_planner {
         void PublishSE3Traj(const SE2Trajectory& traj);
 
         void visualizeYaw(const SE2Trajectory& traj);
+
+        void GetLocalInitPath(const std::vector<Eigen::Vector3d> &init_path);
 
     private:
         std::shared_ptr<ALMTrajOpt> alm_traj_ptr_;

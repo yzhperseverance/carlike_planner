@@ -128,6 +128,7 @@ namespace carlike_planner
             double weight_reverse;
             double time_interval;
             double oneshot_range;
+            double horizon; // 每次向前探索的距离
             double collision_interval;
             double wheel_base;
             double max_steer;

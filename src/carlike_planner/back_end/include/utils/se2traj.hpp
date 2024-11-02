@@ -414,6 +414,7 @@ namespace carlike_planner
         SE2Trajectory() = default;
         PolyTrajectory<2> pos_traj;
         PolyTrajectory<1> yaw_traj;
+        ros::Time start_time;
 
         inline double getTotalDuration() const
         {
@@ -827,11 +828,12 @@ namespace carlike_planner
     public:
         MinJerkOpt<2> pos_minco;
         MinJerkOpt<1> yaw_minco;
-        
+        ros::Time start_time;
         inline void reset(const int& piece_xy, const int& piece_yaw)
         {
             pos_minco.reset(piece_xy);
             yaw_minco.reset(piece_yaw);
+            start_time = ros::Time::now();
         }
 
         inline void generate(const Eigen::MatrixXd &initStateXY, \

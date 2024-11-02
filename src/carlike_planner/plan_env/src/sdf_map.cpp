@@ -113,6 +113,7 @@ namespace carlike_planner {
         md_.has_first_depth_ = false;
         md_.has_odom_ = false;
         md_.has_cloud_ = false;
+        md_.has_esdf_ = false;
 
         md_.esdf_time_ = 0.0;
         md_.fuse_time_ = 0.0;
@@ -291,18 +292,10 @@ namespace carlike_planner {
             ROS_WARN("ESDF: cur t = %lf, avg t = %lf, max t = %lf", (t2 - t1).toSec(),
                      md_.esdf_time_ / md_.update_num_, md_.max_esdf_time_);
 
+        md_.has_esdf_ = true;
         md_.esdf_need_update_ = false;
     }
 
-//    void SDFMap::odomCallback(const nav_msgs::OdometryConstPtr &odom) {
-//        // base_link->laser_link
-//        // 发布base_link在map系的坐标
-//        buff_mutex_.lock();
-//        md_.lidar_pos_(0) = odom->pose.pose.position.x + mp_.lidar_pos_x;
-//        md_.lidar_pos_(1) = odom->pose.pose.position.y + mp_.lidar_pos_y;
-//        buff_mutex_.unlock();
-//        md_.has_odom_ = true;
-//    }
 
     void SDFMap::cloudOdomCallback(const sensor_msgs::LaserScanConstPtr &scan,
                                    const nav_msgs::OdometryConstPtr& odom) {
@@ -329,8 +322,7 @@ namespace carlike_planner {
 
         pcl::PointCloud<pcl::PointXYZ> latest_cloud;
         pcl::fromROSMsg(cloud, latest_cloud);
-        md_.has_cloud_ = true;
-        md_.has_odom_ = true;
+
         // map系下雷达坐标 也可以使用定位模块的位姿
         md_.lidar_pos_(0) = odom->pose.pose.position.x + mp_.lidar_pos_x;
         md_.lidar_pos_(1) = odom->pose.pose.position.y + mp_.lidar_pos_y;
@@ -404,7 +396,8 @@ namespace carlike_planner {
         boundIndex(md_.local_bound_max_);
 
         md_.esdf_need_update_ = true;
-
+        md_.has_cloud_ = true;
+        md_.has_odom_ = true;
     }
 
     void SDFMap::publishMap() {
