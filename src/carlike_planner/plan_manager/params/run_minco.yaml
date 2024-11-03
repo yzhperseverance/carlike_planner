@@ -66,7 +66,7 @@ manager_node:
     beta: 1000.0
     gamma: 1.0
     epsilon_con: 0.001
-    max_iter: 15
+    max_iter: 10
     g_epsilon: 1.0e-03
     min_step: 1.0e-32
     inner_max_iter: 10000
