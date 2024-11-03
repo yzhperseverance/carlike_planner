@@ -48,5 +48,5 @@ sudo make install
 ```
 
 <p align="center">
-  <img src="https://github.com/yzhperseverance/carlike_planner/blob/main/figure.png" width = "420" height = "237"/>
+  <img src="https://github.com/yzhperseverance/carlike_planner/blob/main/figure.png"
 </p> -->
