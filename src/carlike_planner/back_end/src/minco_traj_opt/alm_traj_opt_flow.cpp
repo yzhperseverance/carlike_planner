@@ -14,14 +14,14 @@ namespace carlike_planner {
     }
 
 
-    void AlmTrajOptFlow::Run(const std::vector<Eigen::Vector3d> &init_path) {
+    int AlmTrajOptFlow::Run(const std::vector<Eigen::Vector3d> &init_path) {
         if(!alm_traj_ptr_->sdf_map){
             std::cout << "No SDF Map" << std::endl;
-            return;
+            return -1;
         }
         if(!alm_traj_ptr_->sdf_map->md_.has_cloud_){
             std::cout << "No Cloud" << std::endl;
-            return;
+            return -1;
         }
 
         GetLocalInitPath(init_path);
@@ -50,11 +50,10 @@ namespace carlike_planner {
 
         int ret = alm_traj_ptr_->optimizeSE2Traj(init_xy, end_xy, inner_xy, \
                     init_yaw, end_yaw, inner_yaw, total_time);
-        if(ret != 0) return;
+        if(ret != 0) return -1;
         SE2Trajectory back_end_traj = alm_traj_ptr_->getTraj();
         PublishSE2Traj(back_end_traj);
-        //visualizeYaw(back_end_traj);
-        //PublishSE3Traj(back_end_traj);
+        return 0;
     }
 
     void AlmTrajOptFlow::SmoothYaw() {

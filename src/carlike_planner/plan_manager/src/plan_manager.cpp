@@ -144,7 +144,7 @@ namespace carlike_planner
 
             case REPLAN_TRAJ: {
                 ros::Time      time_now = ros::Time::now();
-                double         t_cur    = (time_now - local_traj.start_time).toSec();
+                double         t_cur    = (time_now - local_traj.start_time).toSec() + 0.4;
 
                 Eigen::Vector2d cur_pt  = local_traj.pos_traj.getValue(t_cur);
                 double cur_yaw = local_traj.yaw_traj.getValue(t_cur)[0];
@@ -186,9 +186,9 @@ namespace carlike_planner
         std::cout << "-------------------ALM Start------------------" << std::endl;
         // minco optimize
 
-        traj_opt_flow->Run(init_path);
+        int ret = traj_opt_flow->Run(init_path);
         std::cout << "--------------------ALM End-------------------" << std::endl;
-
+        if(ret == -1) return false;
         // visualization
         SE2Trajectory back_end_traj = traj_opt_flow->GetTraj();
         // 更新local_traj，用于replan决策,back_end_traj里没有设置start_time，因为start_time应该是在hybrid A*规划前的

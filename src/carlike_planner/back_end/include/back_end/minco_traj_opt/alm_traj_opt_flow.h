@@ -17,7 +17,7 @@ namespace carlike_planner {
 
         explicit AlmTrajOptFlow(ros::NodeHandle &nh);
 
-        void Run(const std::vector<Eigen::Vector3d> &init_path);
+        int Run(const std::vector<Eigen::Vector3d> &init_path);
 
         inline void SetEnvironment(const SDFMap::Ptr& env) { alm_traj_ptr_->setEnvironment(env); }
 

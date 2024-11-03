@@ -15,8 +15,8 @@ manager_node:
 
   sdf_map:
     resolution: 0.1
-    map_size_x: 10.0
-    map_size_y: 10.0
+    map_size_x: 20.0
+    map_size_y: 20.0
     local_update_range_x: 5.5
     local_update_range_y: 5.5
     obstacles_inflation: 0.099
