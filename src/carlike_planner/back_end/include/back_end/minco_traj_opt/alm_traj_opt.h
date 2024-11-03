@@ -52,6 +52,7 @@ namespace carlike_planner
             double g_epsilon;
             double min_step;
             double inner_max_iter;
+            int max_linesearch;
             double delta;
             int    mem_size;
             int    past;

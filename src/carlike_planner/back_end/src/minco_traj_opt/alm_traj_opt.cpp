@@ -22,6 +22,7 @@ namespace carlike_planner
         nh.getParam("alm_traj_opt/g_epsilon", g_epsilon);
         nh.getParam("alm_traj_opt/min_step", min_step);
         nh.getParam("alm_traj_opt/inner_max_iter", inner_max_iter);
+        nh.getParam("alm_traj_opt/inner_max_iter", max_linesearch);
         nh.getParam("alm_traj_opt/delta", delta);
         nh.getParam("alm_traj_opt/mem_size", mem_size);
         nh.getParam("alm_traj_opt/past", past);
@@ -96,6 +97,7 @@ namespace carlike_planner
         lbfgs_params.min_step = min_step;
         lbfgs_params.delta = delta;
         lbfgs_params.max_iterations = inner_max_iter;
+        lbfgs_params.max_linesearch = max_linesearch;
         double inner_cost;
 
         // begin PHR Augmented Lagrangian Method
@@ -144,7 +146,7 @@ namespace carlike_planner
 
         }
         ROS_INFO_STREAM("[ALM] Time consuming: "<<(ros::Time::now()-start_time).toSec() * 1000.0 << " ms");
-        ROS_INFO_STREAM("[ALM] Jerk cost: "<<minco_se2.getTrajJerkCost() << " traj time:" << minco_se2.getTraj().getTotalDuration());
+        ROS_INFO_STREAM("[ALM] Jerk cost: "<< minco_se2.getTrajJerkCost() << " traj time:" << minco_se2.getTraj().getTotalDuration());
 
         return ret_code;
     }
@@ -553,7 +555,15 @@ namespace carlike_planner
                 ay = lat_acc;
                 curv_snorm = wz * wz / (vx*vx + delta_sigl); // wz^2 / (vx^2 + δ)
                 sdf_map->evaluateEDTWithGrad(pos, -1.0, dist, grad_dist);
-                //std::cout << "dist=" << dist << ",grad_dist=" << grad_dist(0) << "," << grad_dist(1) << std::endl;
+
+                if (j==0 || j==int_K)
+                    omega = 0.5 * rho_ter * step * scale_fx; // 为什么在边界点cost要小一点？ 梯形积分法
+                else
+                    omega = rho_ter * step * scale_fx;
+                double user_cost = omega * dist * dist;
+                cost += user_cost;
+                gdTxy(i) += user_cost / int_K;
+
                 // hx是等式约束，gx是不等式约束
                 // non-holonomic
                 // 这里保证了xy和yaw的方向不会冲突，因为只有速度方向和yaw的方向一致这项才会趋于0

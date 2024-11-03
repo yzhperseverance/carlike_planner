@@ -15,8 +15,8 @@ manager_node:
 
   sdf_map:
     resolution: 0.1
-    map_size_x: 40.0
-    map_size_y: 20.0
+    map_size_x: 10.0
+    map_size_y: 10.0
     local_update_range_x: 5.5
     local_update_range_y: 5.5
     obstacles_inflation: 0.099
@@ -54,7 +54,7 @@ manager_node:
   alm_traj_opt:
     rho_T: 100000.0
     rho_ter: 10.0
-    max_vel: 3.0
+    max_vel: 2.0
     max_acc_lon: 5.0
     max_acc_lat: 10.0
     max_kap: 2.1
@@ -66,10 +66,11 @@ manager_node:
     beta: 1000.0
     gamma: 1.0
     epsilon_con: 0.001
-    max_iter: 10
+    max_iter: 15
     g_epsilon: 1.0e-03
     min_step: 1.0e-32
     inner_max_iter: 10000
+    max_linesearch: 64
     delta: 1.0e-4
     mem_size: 256
     past: 3
@@ -85,7 +86,6 @@ manager_node:
     init_sig_vel: 0.05
     no_replan_thresh: 2.0
     replan_thresh: 1.5
-    have_global_map: true
 
 mpc:
   du_threshold: 0.001

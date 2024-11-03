@@ -11,7 +11,6 @@ namespace carlike_planner
         nh.getParam("manager/init_sig_vel", init_sig_vel);
         nh.getParam("manager/no_replan_thresh", no_replan_thresh);
         nh.getParam("manager/replan_thresh", replan_thresh);
-        nh.getParam("manager/have_global_map", have_global_map);
         nh.param<string>("manager/bk_dir", bk_dir, "xxx");
 
         exec_state_  = FSM_EXEC_STATE::INIT;
@@ -57,6 +56,10 @@ namespace carlike_planner
     void PlanManager::rcvGoalCallBack(const geometry_msgs::PoseStamped msg){
         goal = msg;
         have_goal = true;
+        if (exec_state_ == WAIT_TARGET)
+            changeFSMExecState(GEN_NEW_TRAJ, "TRIG");
+        else if (exec_state_ == EXEC_TRAJ)
+            changeFSMExecState(REPLAN_TRAJ, "TRIG");
     }
 
     void PlanManager::changeFSMExecState(FSM_EXEC_STATE new_state, string pos_call) {
@@ -111,7 +114,7 @@ namespace carlike_planner
                 double         t_cur    = (time_now - local_traj.start_time).toSec();
 
                 t_cur                   = min(local_traj.pos_traj.getTotalDuration(), t_cur);
-
+//
                 Eigen::Vector2d start_pos = local_traj.pos_traj.getValue(0.0);
                 Eigen::Vector2d cur_pos = local_traj.pos_traj.getValue(t_cur);
                 Eigen::Vector3d end_state(goal.pose.position.x, \
@@ -182,6 +185,7 @@ namespace carlike_planner
 
         std::cout << "-------------------ALM Start------------------" << std::endl;
         // minco optimize
+
         traj_opt_flow->Run(init_path);
         std::cout << "--------------------ALM End-------------------" << std::endl;
 

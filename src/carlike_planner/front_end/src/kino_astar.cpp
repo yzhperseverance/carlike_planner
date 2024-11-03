@@ -108,19 +108,14 @@ namespace carlike_planner
                 {
                     std::cout << "one-shot time: " << (ros::Time::now()-t1).toSec()*1000 << " ms"<<std::endl;
                     ROS_INFO_STREAM("[Hybrid A*] Time consuming: "<<(ros::Time::now()-t0).toSec() * 1000.0 << " ms");
-                    retrievePath(cur_node);
+                    retrieveShotPath(cur_node);
                     visFrontEnd();
                     return front_end_path;
                 }
             }
 //            bool reach_horizon = (cur_node->state.head(2) - start_state.head(2)).norm() >= horizon;
 //            if(reach_horizon){
-//                while (cur_node->parent != NULL)
-//                {
-//                    cur_node = cur_node->parent;
-//                    front_end_path.push_back(cur_node->state);
-//                }
-//                reverse(front_end_path.begin(), front_end_path.end());
+//                retrievePath(cur_node);
 //                ROS_INFO_STREAM("[Hybrid A*] Time consuming: "<<(ros::Time::now()-t0).toSec() * 1000.0 << " ms");
 //                return front_end_path;
 //            }

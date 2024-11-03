@@ -42,13 +42,15 @@ namespace carlike_planner {
 
         // 为什么要乘0.05？？？可能是因为这是约束条件，表示方向即可，所以乘了一个系数让他缩小
         // 这就是控制开始位姿和结束位姿的方法！？
+
         init_xy.col(1) << 0.05 * cos(init_yaw(0)), 0.05 * sin(init_yaw(0));
         end_xy.col(1) << 0.05 * cos(end_yaw(0)), 0.05 * sin(end_yaw(0));
 
         GetInnerPoint(inner_xy, inner_yaw, total_time);
 
-        alm_traj_ptr_->optimizeSE2Traj(init_xy, end_xy, inner_xy, \
+        int ret = alm_traj_ptr_->optimizeSE2Traj(init_xy, end_xy, inner_xy, \
                     init_yaw, end_yaw, inner_yaw, total_time);
+        if(ret != 0) return;
         SE2Trajectory back_end_traj = alm_traj_ptr_->getTraj();
         PublishSE2Traj(back_end_traj);
         //visualizeYaw(back_end_traj);
@@ -75,7 +77,7 @@ namespace carlike_planner {
         init_path_.clear();
         for(auto &point: init_path){
             Eigen::Vector2d pos = point.head(2);
-            if(!alm_traj_ptr_->sdf_map->isInMap(pos)) break;
+            //if((pos - init_path[0].head(2)).norm() > 3.0) break;
             init_path_.push_back(point);
         }
     }

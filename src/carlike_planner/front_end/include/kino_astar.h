@@ -181,6 +181,7 @@ namespace carlike_planner
             inline void stateTransit(const Eigen::Vector3d &state0, Eigen::Vector3d &state1, \
                                     const Eigen::Vector2d &ctrl_input, const double& T);
             inline void asignShotTraj(const Eigen::Vector3d &state1, const Eigen::Vector3d &state2);
+            inline void retrieveShotPath(PathNodePtr end_node);
             inline void retrievePath(PathNodePtr end_node);
             inline std::vector<geometry_msgs::Point> getModel(const Eigen::Vector3d state);
 
@@ -318,12 +319,19 @@ namespace carlike_planner
         return;
     }
 
-    inline void KinoAstar::retrievePath(PathNodePtr end_node)
+    inline void KinoAstar::retrieveShotPath(PathNodePtr end_node)
     {
         for (int i=shot_path.size()-1; i>=0; i--)
         {
             front_end_path.push_back(shot_path[i]);
         }
+
+        retrievePath(end_node);
+
+        return;
+    }
+    inline void KinoAstar::retrievePath(PathNodePtr end_node)
+    {
 
         PathNodePtr cur_node = end_node;
         front_end_path.push_back(cur_node->state);
