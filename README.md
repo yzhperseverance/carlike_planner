@@ -47,4 +47,6 @@ sudo make install
 ./run.sh
 ```
 
-![2024-11-03 20-51-57 的屏幕截图](/home/yzh/图片/2024-11-03 20-51-57 的屏幕截图.png)
+<p align="center">
+  <img src="https://github.com/yzhperseverance/carlike_planner/blob/main/figure.png" width = "420" height = "237"/>
+</p> -->
