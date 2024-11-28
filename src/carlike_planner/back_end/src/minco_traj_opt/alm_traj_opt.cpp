@@ -200,6 +200,7 @@ namespace carlike_planner
                                  gdCyaw_constrain, gdTyaw_constrain);
 
         // K =  jerk_cost +  constrain_cost
+        // K要求是二阶连续可导
         if (obj.use_scaling)
         {
             gdCxy_jerk *= scale_trick_jerk;

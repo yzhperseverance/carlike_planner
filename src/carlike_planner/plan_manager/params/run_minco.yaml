@@ -15,8 +15,8 @@ manager_node:
 
   sdf_map:
     resolution: 0.1
-    map_size_x: 20.0
-    map_size_y: 20.0
+    map_size_x: 40.0
+    map_size_y: 30.0
     local_update_range_x: 5.5
     local_update_range_y: 5.5
     obstacles_inflation: 0.099
@@ -68,7 +68,7 @@ manager_node:
     epsilon_con: 0.001
     max_iter: 10
     g_epsilon: 1.0e-03
-    min_step: 1.0e-32
+    min_step: 1.0e-20
     inner_max_iter: 10000
     max_linesearch: 64
     delta: 1.0e-4
@@ -91,7 +91,7 @@ mpc:
   du_threshold: 0.001
   dt: 0.02
   max_iter: 150
-  predict_steps: 30
+  predict_steps: 15
   delay_num: 0
   max_omega: 24.0
   max_domega: 10.0

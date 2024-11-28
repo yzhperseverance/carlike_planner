@@ -188,7 +188,10 @@ namespace carlike_planner
 
         int ret = traj_opt_flow->Run(init_path);
         std::cout << "--------------------ALM End-------------------" << std::endl;
-        if(ret == -1) return false;
+        if(ret == -1){
+            in_plan = false;
+            return false;
+        }
         // visualization
         SE2Trajectory back_end_traj = traj_opt_flow->GetTraj();
         // 更新local_traj，用于replan决策,back_end_traj里没有设置start_time，因为start_time应该是在hybrid A*规划前的

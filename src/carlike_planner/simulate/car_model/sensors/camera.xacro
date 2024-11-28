@@ -12,7 +12,7 @@
 	    <visual>
 		<origin xyz=" 0 0 0 " rpy="1.57 0 1.57" />
 		<geometry>
-		    <mesh filename="package://racecar_description/meshes/S1030-0315.dae" scale="0.1 0.1 0.1" />
+		    <mesh filename="package://simulate/car_model/meshes/S1030-0315.dae" scale="0.1 0.1 0.1" />
 		</geometry>
 	    </visual>
 
