@@ -1,5 +1,7 @@
 # carlike_planner
 
+This project is modified from the uneven_planner for a 2D scenario. The known bug is that the optimizer may fail to converge when the target point is close to an obstacle. It might be fixed in the future.
+
 ## requirements
 
 ```
