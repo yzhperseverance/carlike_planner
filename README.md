@@ -21,6 +21,16 @@ sudo apt install ros-noetic-ompl
 sudo apt install ros-noetic-tf2-geometry-msgs ros-noetic-ackermann-msgs ros-noetic-joy 
 ```
 
+**ompl soft link**
+
+Due to the special file structure of OMPL, CMake may not be able to find OMPL, so a symbolic link needs to be created.
+
+```
+sudo ln -s /opt/ros/melodic/include/ompl-1.6/ompl /opt/ros/melodic/include/ompl
+```
+
+
+
 **osqp-0.6.2 and osqp-eigen v0.8.0 for mpc controller:**
 
 Firstly, go to [website of OSPQ](https://github.com/osqp/osqp/releases) and download `complete_sources.zip` from the Assets of `0.6.2`. Then unzip the code,
