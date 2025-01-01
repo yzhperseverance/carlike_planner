@@ -26,7 +26,7 @@ sudo apt install ros-noetic-tf2-geometry-msgs ros-noetic-ackermann-msgs ros-noet
 Due to the special file structure of OMPL, CMake may not be able to find OMPL, so a symbolic link needs to be created.
 
 ```
-sudo ln -s /opt/ros/melodic/include/ompl-1.6/ompl /opt/ros/melodic/include/ompl
+sudo ln -s /opt/ros/noetic/include/ompl-1.6/ompl /opt/ros/noetic/include/ompl
 ```
 
 
